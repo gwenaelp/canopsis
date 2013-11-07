@@ -1,5 +1,4 @@
 /*
-#--------------------------------
 # Copyright (c) 2011 "Capensis" [http://www.capensis.com]
 #
 # This file is part of Canopsis.
@@ -16,7 +15,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
-# ---------------------------------
 */
 
 Ext.define('canopsis.view.Account.Grid' , {
@@ -31,10 +29,18 @@ Ext.define('canopsis.view.Account.Grid' , {
 
 	opt_grouping: true,
 	opt_paging: false,
+	opt_bar_duplicate: true,
 	opt_menu_delete: true,
 	opt_menu_rights: false,
 	opt_menu_authKey: true,
 	opt_bar_enable: true,
+
+	opt_bar_customs: [{
+		text: 'Ldap',
+		xtype: 'button',
+		iconCls: 'icon-book',
+		action: 'ldap'
+	}],
 
 	columns: [
 		{
@@ -43,6 +49,16 @@ Ext.define('canopsis.view.Account.Grid' , {
 			sortable: false,
 			renderer: rdr_crecord_type,
 			dataIndex: 'crecord_type'
+		},{
+			header: '',
+			width: 25,
+			sortable: false,
+			renderer: function(val) {
+				if(val === true) {
+					return "<span class='icon icon-book_link' />";
+				}
+			},
+			dataIndex: 'external'
 		},{
 			header: _('Enabled'),
 			align: 'center',
@@ -82,7 +98,5 @@ Ext.define('canopsis.view.Account.Grid' , {
 			dataIndex: 'groups',
 			renderer: rdr_display_groups
 		}
-
 	]
-
 });

@@ -174,7 +174,7 @@
 								"queryMode": "local",
 								"displayField": "text",
 								"valueField": "value",
-								"value": "MEAN",
+								"value": "AVERAGE",
 								"store": {
 									"xtype": "store",
 									"fields": ["value", "text"],
@@ -185,7 +185,7 @@
 										{"value": "LAST", "text": "Last"},
 										{"value": "FIRST", "text": "First"},
 										{"value": "DELTA", "text": "Delta"},
-										{"value": "MEAN", "text": "Mean"},
+										{"value": "AVERAGE", "text": "Average"},
 										{"value": "SUM", "text": "Sum"}
 									]
 								}
@@ -217,6 +217,11 @@
 										{"value": 31557600, "text": "1 year"}
 									]
 								}
+							}, {
+								"xtype": "checkbox",
+								"name": "aggregate_round_time",
+								"fieldLabel": "Round time (if interval)",
+								"checked": true
 							}
 						]
 					},{
@@ -239,7 +244,7 @@
 										{"value": "max", "text": "Max"},
 										{"value": "min", "text": "Min"},
 										{"value": "sum", "text": "Sum"},
-										{"value": "mean", "text": "Mean"}
+										{"value": "average", "text": "Average"}
 									]
 								}
 							}
@@ -376,19 +381,27 @@
 		},{
 			"title": "Choose events",
 			"advanced": true,
-			"layout":"anchor",
 			"items": [{
-				"xtype": "cfilter",
-				"name": "flagFilter",
-				"anchor": "100% 80%"
-			},{
-				"xtype":"numberfield",
-				"name": "nbMavEventsDisplayed",
-				"fieldLabel":"Maximum number of displayed events (0 for no limit)",
-				"labelWidth": 200,
-				"value": 100,
-				"minValue": 0,
-				"anchor": "50% 10%"
+				"xtype": "panel",
+    			"border":0,
+				"layout": {                        
+					"type": "vbox",
+					"pack": "start",
+					"align" : "stretch"
+    			},
+				"items":[{
+					"xtype": "cfilter",
+					"name": "flagFilter",
+					"flex": 1
+				},{
+					"xtype":"numberfield",
+					"name": "nbMavEventsDisplayed",
+					"fieldLabel":"Maximum number of displayed events (0 for no limit)",
+					"labelWidth": 200,
+					"value": 100,
+					"minValue": 0,
+					"flex": 0
+				}]
 			}]
 		},{
 			"title": "Choose Metrics",
@@ -400,6 +413,7 @@
 						"sharedStore":"line_graph",
 						"additional_field": [
 											"label",
+											"curve_type",
 											"curve_color",
 											"Curve color",
 											"area_color",
@@ -415,6 +429,20 @@
 						"xtype": "ccustom",
 						"sharedStore":"line_graph",
 						"customForm": [{
+											"xtype" : "combobox",
+											"name" : "curve_type",
+											"fieldLabel": "Curve type",
+											"value":"default",
+											"store": {
+												"xtype": "store",
+												"fields": ["value", "text"],
+												"data" : [
+													{"value": "default", "text": "Default"},
+													{"value": "line", "text": "Line"},
+													{"value": "area", "text": "Area"}
+												]
+											}
+										},{
 											"xtype":"textfield",
 											"fieldLabel":"Custom label",
 											"name":"label",
