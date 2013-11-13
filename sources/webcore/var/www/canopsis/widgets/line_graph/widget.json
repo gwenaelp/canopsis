@@ -249,6 +249,54 @@
 								}
 							}
 						]
+					},
+					{
+						"xtype": "cfieldset",
+						"title": "Forecast",
+						"items":[
+							{
+								"xtype": "checkbox",
+								"fieldLabel": "Enable",
+								"name": "enable_forecast",
+								"checked": false
+							},
+							{
+								"xtype": "numberfield",
+								"fieldLabel": "max points",
+								"name": "forecast_max_points",
+								"value": 500
+							},
+							{
+								"xtype": "datefield",
+								"fieldLabel": "End date (if no max points)",
+								"name": "forecast_date",
+								"value": 0
+							},
+							{
+								"xtype": "cduration",
+								"name": "forecast_duration",
+								"value": 0,
+								"fieldLabel": "Forecast Duration (if no max points and no end date)"
+							},
+							{
+								"xtype": "numberfield",
+								"name": "alpha",
+								"value": 0.99,
+								"fieldLabel": "Alpha"
+							},
+							{
+								"xtype": "numberfield",
+								"name": "beta",
+								"value": 0.12,
+								"fieldLabel": "Beta"
+							},
+							{
+								"xtype": "numberfield",
+								"name": "gamma",
+								"value": 0.80,
+								"fieldLabel": "Gamma"
+							}
+						]
 					}
 				]
 		},{					

@@ -32,6 +32,15 @@ import calendar
 from datetime import datetime, timedelta
 from dateutil.relativedelta import *
 
+AVERAGE = 'AVERAGE'
+MEAN = 'MEAN'
+LAST = 'LAST'
+FIRST = 'FIRST'
+DELTA = 'DELTA'
+SUM = 'SUM'
+MAX = 'MAX'
+MIN = 'MIN'
+
 T_SECOND = 'second'
 T_MINUTE = 'minute'
 T_HOUR = 'hour'
@@ -394,7 +403,129 @@ def getTimeSteps(start, stop, interval, roundtime=True, timezone=time.timezone):
 
 	return timeSteps
 
-def aggregate(points, start=None, stop=None, max_points=None, interval=None, atype='AVERAGE', agfn=None, mode=None, fill=False, roundtime = True, timezone=time.timezone):
+BY_POINT = 'by_point'
+BY_INTERVAL = 'by_interval'
+BY_PERIOD = 'by_period'
+
+MAX_POINTS = 1450
+
+def _aggregate(points, start=None, stop=None, max_points=None, period=None, atype=AVERAGE, agfn=None, mode=BY_POINT, fill=False, roundtime = True, timezone=time.timezone):
+
+	if not max_points:
+		max_points=MAX_POINTS
+		
+	if period:
+		mode = BY_PERIOD
+	elif max_points:
+		max_points = int(max_points)
+	else:
+		raise Exception('Aggregation call must contain max_points or period values')
+
+	if max_points != None:
+		 max_points = int(max_points)
+
+	atype = atype.upper()
+	
+	logger.debug("Aggregate %s points (max: %s, period: %s, method: %s, mode: %s)" % (len(points), max_points, (periodtime, periodtype), atype, mode))
+
+	if not agfn:
+		if atype == AVERAGE or atype == MEAN:
+			agfn = vaverage
+		elif atype == FIRST:
+			agfn = get_first_value
+		elif atype == LAST:
+			agfn = get_last_value
+		elif atype == MIN:
+			agfn = vmin
+		elif atype == MAX:
+			agfn = vmax
+		elif atype == DELTA:
+			agfn = delta
+		elif atype == SUM:
+			agfn = vsum
+		else:
+			agfn = vaverage
+
+	rpoints=[]
+	
+	if mode == BY_POINT:
+		if len(points) < max_points:
+			logger.debug(" + Useless (%s < %s)" % (len(points), max_points))
+			return points
+		
+		interval = int(round(len(points) / float(max_points)))
+		logger.debug(" + point period: %s" % interval)
+		
+		for x in range(0, len(points), interval):
+			sample = points[x:x+interval]
+			value = agfn(sample)
+			timestamp = sample[len(sample)-1][0]
+			rpoints.append([timestamp, value])
+		
+	elif mode == 'by_interval':
+		
+		if not start:
+			start = points[0][0]
+
+		if not stop:
+			stop = points[len(points)-1][0]
+
+		if len(points) == 1:
+			return [ [start, points[0][1]] ]
+		
+		logger.debug(' + Start: %s' %  datetime.utcfromtimestamp(start))
+		logger.debug(' + Stop:  %s' %  datetime.utcfromtimestamp(stop))
+
+		timeSteps = getTimeSteps(start, stop, interval, roundtime, timezone)
+
+		#initialize variables for loop
+		prev_point = None
+		i=0
+		points_to_aggregate = []
+		last_point = None
+
+		for index in xrange(1, len(timeSteps)):
+
+			timestamp = timeSteps[index]
+			
+			previous_timestamp = timeSteps[index-1]
+			
+			logger.debug("   + Interval %s -> %s" % (previous_timestamp, timestamp))
+
+			while i < len(points) and points[i][0] < timestamp:
+
+				points_to_aggregate.append(points[i])
+
+				i+=1
+
+			if atype == 'DELTA' and last_point:
+				points_to_aggregate.insert(0, last_point)
+
+			aggregation_point = get_aggregation_point(points_to_aggregate, agfn, previous_timestamp, fill)
+
+			rpoints.append(aggregation_point)
+
+			if points_to_aggregate:
+				last_point = points_to_aggregate[-1]
+
+			points_to_aggregate = []
+
+		if i < len(points):
+
+			points_to_aggregate = points[i:]
+
+			if atype == 'DELTA' and last_point:
+				points_to_aggregate.insert(0, last_point)
+
+			aggregation_point = get_aggregation_point(points_to_aggregate, agfn, timeSteps[-1], fill)
+
+			rpoints.append(aggregation_point)
+
+	logger.debug(" + Nb points: %s" % len(rpoints))
+
+	return rpoints
+
+def aggregate(points, start=None, stop=None, max_points=None, interval=None, atype=AVERAGE, agfn=None, mode=None, fill=False, roundtime = True, timezone=time.timezone):
 
 	if not atype:
 		return points

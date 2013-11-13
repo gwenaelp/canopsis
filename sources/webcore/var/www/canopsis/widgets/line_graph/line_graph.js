@@ -149,6 +149,22 @@ Ext.define('widgets.line_graph.line_graph', {
 	autoShift: false,
 	lastShift: undefined,
 
+	// forecast
+	enable_forecast: true,
+	forecast_max_points: 500,
+	forecast_date: undefined,
+	forecast_duration: undefined,
+
+	alpha: 0.99,
+	beta: 0.12,
+	gamma: 0.80,
+	//l0: 5.30,
+	//b0: 0.71
+	// not linear and mid-variable: 0.99, 0.12, 0.80, 5.30, 0.71
+	// linear: 0.99, 0.01, 0.97, 262.5, 1.12
+	// not linear and variable: alpha: 0.60, gamma: 0.01, l0: 343.5
+	// linear and variable: 0.68, 0.01, 0.17, 84.5, 2.87
+
 	initComponent: function() {
 		this.callParent(arguments);
 
