@@ -28,7 +28,7 @@
    \--+ doRefresh
       \--+ refreshNodes
          \--+ onRefresh
-            \--+ a								ddDataOnChart
+            \--+ addDataOnChart
                \--- getSerie
 
 */
@@ -571,7 +571,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		if(val) {
 			var dval = new Date(parseInt(val) * 1000);
 
-			if (this.aggregate_method) {
+			if (this.aggregate_method || this.consolidation_method) {
 				switch(this.aggregate_interval) {
 					case 900: 
 					case 1800: 
@@ -608,7 +608,6 @@ Ext.define('widgets.line_graph.line_graph', {
 		var now = Ext.Date.now();
 
 		if(this.chart) {
-
 			if(this.timeNav) {
 				var time_limit = now - (this.timeNav_window * 1000);
 
@@ -625,13 +624,11 @@ Ext.define('widgets.line_graph.line_graph', {
 					return;
 				}
 
-				var time_window = to - from;
-
 				this.onDoRefresh = true;
 
 				var serie = this.chart.get('timeNav');
 				var e = serie.xAxis.getExtremes();
-				time_window = e.max - e.min;
+				var time_window = e.max - e.min;
 
 				if(this.reportMode) {
 					this.stopTask();
@@ -1533,7 +1530,7 @@ Ext.define('widgets.line_graph.line_graph', {
  	},
 
  	processPostParam: function(post_param) { // patch in waiting that shift method is reused
- 		if (post_param['from'] && post_param['to']) {
+ 		if(post_param['from'] && post_param['to']) {
  			if(this.timeNav) {
 				var time_limit = (post_param['to'] - this.timeNav_window);
 				post_param['from'] = (post_param['to'] - this.timeNav_window);
@@ -1542,7 +1539,7 @@ Ext.define('widgets.line_graph.line_graph', {
 					post_param['from'] = time_limit;
 				}
 			}
-			else {
+			else if(!this.reportMode) {
  				post_param['from'] = (post_param['to'] - this.time_window);
  			}
  		}
