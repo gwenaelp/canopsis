@@ -117,12 +117,6 @@ Ext.define('widgets.line_graph.line_graph', {
 	// 10 minutes
 	maxZoom: 60 * 10,
 
-	interval: global.commonTs.hours,
-	aggregate_method: 'MAX',
-	aggregate_interval: 0,
-	aggregate_max_points: 500,
-	aggregate_round_time: true,
-
 	SeriesType: 'area',
 
 	SeriePercent: false,
@@ -149,21 +143,30 @@ Ext.define('widgets.line_graph.line_graph', {
 	autoShift: false,
 	lastShift: undefined,
 
+	// specific to time serie
+	time_serie_enable: false,
+	time_serie_max_points: 500,
+	time_serie_period: 0,//{'value': 1, 'unit': 'day'},
+	time_serie_sliding_time: true,
+	time_serie_operation: 'MEAN',	
+
 	// forecast
-	enable_forecast: true,
-	forecast_max_points: 500,
+	forecast_enable: false,
+	forecast_max_points: 250,
 	forecast_date: undefined,
 	forecast_duration: undefined,
-
-	alpha: 0.99,
-	beta: 0.12,
-	gamma: 0.80,
+	forecast_alpha: 0.99,
+	forecast_beta: 0.12,
+	forecast_gamma: 0.80,
 	//l0: 5.30,
 	//b0: 0.71
 	// not linear and mid-variable: 0.99, 0.12, 0.80, 5.30, 0.71
 	// linear: 0.99, 0.01, 0.97, 262.5, 1.12
 	// not linear and variable: alpha: 0.60, gamma: 0.01, l0: 343.5
 	// linear and variable: 0.68, 0.01, 0.17, 84.5, 2.87
+
+	critical_threshold: 0,
+	warning_threshold: 0,
 
 	initComponent: function() {
 		this.callParent(arguments);
@@ -1558,6 +1561,37 @@ Ext.define('widgets.line_graph.line_graph', {
 			else if(!this.reportMode) {
  				post_param['from'] = (post_param['to'] - this.time_window);
  			}
+ 		}
+ 	},
+
+ 	processPostParams: function(post_params) {
+ 		console.log('plop');
+ 		if (this.time_serie_enable) {
+	 		var time_serie = {
+	 			max_points: this.time_serie_max_points,
+	 			period: this.time_serie_period,
+	 			sliding_time: this.time_serie_sliding_time,
+	 			operation: this.time_serie_operation
+	 		};
+	 		post_params['time_serie'] = time_serie;
+
+	 		if (this.forecast_enable) {
+		 		var forecast = {
+		 			max_points: this.forecast_max_points,
+		 			date: this.forecast_date,
+		 			duration: this.forecast_duration,
+		 			alpha: this.forecast_alpha,
+		 			beta: this.forecast_beta,
+		 			gamma: this.forecast_gamma
+		 		};
+		 		post_params['forecast'] = forecast;
+	 		}
+
+	 		var thresholds = {
+	 			warning: this.warning_threshold,
+	 			critical: this.critical_threshold
+	 		};
+	 		post_params['threshold'] = threshold;
  		}
  	}
 });
