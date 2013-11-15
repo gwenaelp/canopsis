@@ -41,6 +41,8 @@ manager = None
 logger = logging.getLogger("perfstore")
 logger.setLevel(logging.DEBUG)
 
+pyperfstore2.utils.logger = logger
+
 import ConfigParser
 
 config = ConfigParser.RawConfigParser()
@@ -71,9 +73,12 @@ def unload():
 group_managing_access = ['group.CPS_perfdata_admin']
 #########################################################################
 
-TIME_SERIE = 'time_serie'
+TIMEWINDOW = 'timewindow'
+TIMESERIE = 'timeserie'
 FORECAST = 'forecast'
 THRESHOLDS = 'thresholds'
+
+EXCLUSION_INTERVALS = 'exclusion_intervals'
 
 #### POST@
 @post('/perfstore/values')
@@ -83,34 +88,36 @@ def perfstore_nodes_get_values(start=None, stop=None):
 	interval = None
 	metas = request.params.get('nodes', default=None)
 
-	time_serie = request.params.get(TIME_SERIE, default=None)
+	timeserie = request.params.get(TIMESERIE, default=None)
 	forecast = request.params.get(FORECAST, default=None)
 	thresholds = request.params.get(THRESHOLDS, default=None)
 
-	if time_serie:
-		time_serie = json.dumps(time_serie)
+	exclusion_intervals = request.params.get(EXCLUSION_INTERVALS, default=[])
 
-	if forecast:
-		forecast = json.dumps(forecast)
+	timewindow = pyperfstore2.utils.TimeWindow(start=start, stop=stop, exclusion_intervals=exclusion_intervals)
+
+	if timeserie:
+		logger.debug('timeserie: %s' % timeserie)
+		timeserie = json.loads(timeserie)
+		timeserie[TIMEWINDOW] = timewindow
+		timeserie = pyperfstore2.utils.TimeSerie.get_timeserie(**timeserie)
+
+		if forecast:
+			logger.debug('forecast: %s' % forecast)
+			forecast = json.loads(forecast)
+			forecast[TIMESERIE] = timeserie
+			forecast = pyperfstore2.utils.Forecast(**forecast)
 
 	if thresholds:
-		thresholds = json.dumps(thresholds)
-
-	logger.debug("time_serie: %s" % time_serie)
-	logger.debug("forecast: %s" % forecast)
-	logger.debug("thresholds: %s" % thresholds)
+		logger.debug('thresholds: %s' % thresholds)
+		thresholds = json.loads(thresholds)
+		thresholds = pyperfstore2.utils.Thresholds(**thresholds)
 
 	consolidation_method 		= request.params.get('consolidation_method', default=None)
 
-	timezoneOffset = request.params.get('timezoneOffset', default=time.timezone)
+	timezone = int(request.params.get('timezone', default=0))
 
 	output = []
-
-	if aggregate_method == "":
-		aggregate_method = None
-
-	if aggregate_timemodulation != "false" or aggregate_timemodulation != "False" or aggregate_timemodulation != 0:
-		aggregate_timemodulation = True
 
 	if not metas:
 		logger.warning("Invalid arguments")
@@ -120,11 +127,12 @@ def perfstore_nodes_get_values(start=None, stop=None):
 
 	logger.debug("POST:")
 	logger.debug(" + metas: %s" % metas)
-	logger.debug(" + aggregate_timemodulation: %s" % aggregate_timemodulation)
-	logger.debug(" + aggregate_method: %s" % aggregate_method)
-	logger.debug(" + aggregate_interval: %s" % aggregate_interval)
-	logger.debug(" + aggregate_max_points: %s" % aggregate_max_points)
-	logger.debug(" + aggregate_round_time: %s" % aggregate_round_time)
+	logger.debug("timewindow: %s" % timewindow)
+	logger.debug("timeserie: %s" % timeserie)
+	logger.debug("forecast: %s" % forecast)
+	logger.debug("thresholds: %s" % thresholds)
+	logger.debug("consolidation_method: %s" % consolidation_method)
+	logger.debug("timezone: %s" % timezone)
 
 	output = []
 
@@ -134,22 +142,19 @@ def perfstore_nodes_get_values(start=None, stop=None):
 		# TODO: for futur version, use only this !
 		mstart = meta.get('from', start)
 		mstop = meta.get('to', stop)
+
+		timewindow.start = mstart
+		timewindow.stop = mstop
+
 		if _id:
 			values = perfstore_get_values(	_id=meta['id'],
-											start=mstart,
-											stop=mstop,
-											aggregate_method=aggregate_method,
-											aggregate_interval=aggregate_interval,
-											aggregate_max_points=aggregate_max_points,
-											aggregate_timemodulation=aggregate_timemodulation,
-											aggregate_round_time=aggregate_round_time,
-											timezone=time.timezone)
+											timewindow=timewindow,
+											timeserie=timeserie,
+											forecast=forecast,
+											thresholds=thresholds,
+											timezone=timezone)
 
 			output += values
-
-			if enable_forecast:
-				forecast_values = utils.forecast(values, aggregation_interval, forecast_max_points, alpha, beta, gamma)
-				output += forecast_values
 
 	if consolidation_method and len(output) != 0:
 		##select right function
@@ -509,34 +514,14 @@ def perfstore_perftop(start=None, stop=None):
 # Functions
 ########################################################################
 
-def perfstore_get_values(_id, start=None, stop=None, aggregate_method=pyperfstore_aggregate_method, aggregate_interval=None, aggregate_max_points=pyperfstore_aggregate_maxpoints, aggregate_timemodulation=True, aggregate_round_time=True, timezone=time.timezone):
-
-	if start and not stop:
-		stop = start
-
-	if stop:
-		stop = int(stop)
-	else:
-		stop = int(time.time())
-
-	if start:
-		start = int(start)
-	else:
-		start = stop - 86400
-
-	if aggregate_interval:
-		aggregate_interval = int(aggregate_interval)
+def perfstore_get_values(_id, timewindow, timeserie=None, forecast=None, thresholds=None, timezone=time.timezone):
 
 	logger.debug("Perfstore get points:")
 	logger.debug(" + meta _id:    %s" % _id)
-	logger.debug(" + start:       %s (%s)" % (start, datetime.utcfromtimestamp(start)))
-	logger.debug(" + stop:        %s (%s)" % (stop, datetime.utcfromtimestamp(stop)))
-	logger.debug('Aggregate:')
-	logger.debug(' + method :     %s' % aggregate_method)
-	logger.debug(' + interval :   %s' % aggregate_interval)
-	logger.debug(' + round time : %s' % aggregate_round_time)
-	logger.debug(' + max_points : %s' % aggregate_max_points)
-
+	logger.debug(" + start:       %s (%s)" % (timewindow.start, datetime.utcfromtimestamp(timewindow.start)))
+	logger.debug(" + stop:        %s (%s)" % (timewindow.stop, datetime.utcfromtimestamp(timewindow.stop)))
+	logger.debug(" + timezone:    %s" % timezone)
+	
 	output=[]
 	meta = None
 
@@ -544,21 +529,17 @@ def perfstore_get_values(_id, start=None, stop=None, aggregate_method=pyperfstor
 		logger.error("Invalid _id '%s'" % _id)
 		return output
 
-	fill = False
-
-	if aggregate_interval and aggregate_timemodulation:
-		aggregate_max_points = int( round((stop - start) / aggregate_interval + 0.5) )
-		fill = True
-
 	try:
 		points = []
+		F = []
 
-		if start == stop:
+		if timewindow.start == timewindow.stop:
 			# Get only one point
-			logger.debug("   + Get one point at %s: %s" % (stop, datetime.utcfromtimestamp(start)))
+			logger.debug("   + Get one point!")
 			(meta, point) = manager.get_point(	_id=_id,
-												ts=start,
+												ts=timewindow.start,
 												return_meta=True)
+
 			if point:
 				points = [ point ]
 
@@ -567,33 +548,44 @@ def perfstore_get_values(_id, start=None, stop=None, aggregate_method=pyperfstor
 		else:
 
 			(meta, points) = manager.get_points(	_id=_id,
-													tstart=start,
-													tstop=stop,
+													tstart=timewindow.start,
+													tstop=timewindow.stop,
 													return_meta=True)
 
 			# For UI display
 			if len(points) == 0 and meta['type'] == 'COUNTER':
-				points = [(start, 0), (stop, 0)]
+				points = [(timewindow.start, 0), (timewindow.stop, 0)]
 
 			if len(points) and meta['type'] == 'COUNTER':
-				# Insert null point for aggreagation
+				# Insert null point for aggregation
 				points.insert(0, [points[0][0], 0])
 
-			if len(points):
-				points =  pyperfstore2.utils.aggregate(	points=points,
-														max_points=aggregate_max_points,
-														interval=aggregate_interval,
-														atype=aggregate_method,
-														start=start,
-														stop=stop,
-														fill=fill,
-														roundtime = aggregate_round_time,
+			if len(points) and timeserie:
+				logger.debug('time serie')
+				points =  pyperfstore2.utils.timeserie(points=points,
+														timewindow=timewindow,
+														timeserie=timeserie,
+														forecast=forecast,
+														thresholds=thresholds,
 														timezone=timezone)
+
+				logger.debug('time serie %s' % len(points))
+
+				if forecast:					
+					F = pyperfstore2.utils.forecast(points=points, forecast=forecast)
+					logger.debug('forecast %s' % len(F))
 
 	except Exception, err:
 		logger.error("Error when getting points: %s" % err)
 
 	if points and meta:
-		output.append({'node': _id, 'metric': meta['me'], 'values': points, 'bunit': meta['unit'], 'min': meta['min'], 'max': meta['max'], 'thld_warn': meta['thd_warn'], 'thld_crit': meta['thd_crit'], 'type': meta['type']})
+		entry = {'node': _id, 'metric': meta['me'], 'values': points, 'bunit': meta['unit'], 'min': meta['min'], 'max': meta['max'], 'thld_warn': meta['thd_warn'], 'thld_crit': meta['thd_crit'], 'type': meta['type']}
+		output.append(entry)
+
+		if len(points) and forecast:
+			entry = entry.copy()
+			entry['values'] = F
+			entry['metric'] += '_forecast'
+			output.append(entry)
 
 	return output

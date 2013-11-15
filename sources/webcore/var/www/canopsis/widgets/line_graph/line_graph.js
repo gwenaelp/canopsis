@@ -146,9 +146,10 @@ Ext.define('widgets.line_graph.line_graph', {
 	// specific to time serie
 	time_serie_enable: false,
 	time_serie_max_points: 500,
-	time_serie_period: 0,//{'value': 1, 'unit': 'day'},
+	time_serie_period: {'value': 1, 'unit': 'day'},
 	time_serie_sliding_time: true,
 	time_serie_operation: 'MEAN',	
+	time_serie_fill: false,
 
 	// forecast
 	forecast_enable: false,
@@ -590,15 +591,15 @@ Ext.define('widgets.line_graph.line_graph', {
 		if(val) {
 			var dval = new Date(parseInt(val) * 1000);
 
-			if (this.aggregate_method || this.consolidation_method) {
-				switch(this.aggregate_interval) {
-					case 900: 
-					case 1800: 
-					case 3600: return Ext.Date.format(dval, 'Y-m-d h:i:s');
-					case 86400: 
-					case 604800: return Ext.Date.format(dval, 'Y-m-d');
-					case 2629800: return Ext.Date.format(dval, 'Y-m');
-					case 31557600: return Ext.Date.format(dval, 'Y');
+			if (this.time_serie && this.time_serie_period.value) {
+				switch(this.time_serie_period.unit) {
+					case 'second': 
+					case 'minute': 
+					case 'hour': return Ext.Date.format(dval, 'Y-m-d h:i:s');
+					case 'day': 
+					case 'week': return Ext.Date.format(dval, 'Y-m-d');
+					case 'month': return Ext.Date.format(dval, 'Y-m');
+					case 'year': return Ext.Date.format(dval, 'Y');
 					default: return rdr_tstodate(val);
 				}
 			} else {
@@ -809,7 +810,7 @@ Ext.define('widgets.line_graph.line_graph', {
 	shift: function(tolerance) {
 		if(tolerance === undefined) {
 			if(this.aggregate_interval) {
-				tolerance = this.aggregate_interval * 1000;
+				// tolerance = this.aggregate_interval * 1000;
 			}
 			else {
 				tolerance = 0;
@@ -888,6 +889,8 @@ Ext.define('widgets.line_graph.line_graph', {
 			return serie;
 		}
 
+		var isForecast = metric_name.indexOf('_forecast') !== -1;
+
 		var node = this.nodesByID[node_id];
 
 		log.debug('  + Create Serie:', this.logAuthor);
@@ -940,7 +943,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		// Set Label
 		var label = undefined;
 
-		if(node.label) {
+		if(node.label && !isForecast) {
 			label = node.label;
 		}
 
@@ -1214,7 +1217,7 @@ Ext.define('widgets.line_graph.line_graph', {
 			var last_timestamp = values[values.length - 1][0];
 
 			// Timestamp of new and old point are equal, remove last point for update
-			if(this.aggregate_interval && last_timestamp === this.series[serie_id]['last_timestamp'] && serie.data.length) {
+			if(this.time_serie && last_timestamp === this.series[serie_id]['last_timestamp'] && serie.data.length) {
 				var point = serie.data[serie.data.length - 1];
 				log.debug('   + Remove last point', this.logAuthor);
 				point.remove(false, false);
@@ -1571,9 +1574,10 @@ Ext.define('widgets.line_graph.line_graph', {
 	 			max_points: this.time_serie_max_points,
 	 			period: this.time_serie_period,
 	 			sliding_time: this.time_serie_sliding_time,
-	 			operation: this.time_serie_operation
+	 			operation: this.time_serie_operation,
+	 			fill: this.time_serie_fill
 	 		};
-	 		post_params['time_serie'] = time_serie;
+	 		post_params['timeserie'] = Ext.JSON.encode(time_serie);
 
 	 		if (this.forecast_enable) {
 		 		var forecast = {
@@ -1584,14 +1588,14 @@ Ext.define('widgets.line_graph.line_graph', {
 		 			beta: this.forecast_beta,
 		 			gamma: this.forecast_gamma
 		 		};
-		 		post_params['forecast'] = forecast;
+		 		post_params['forecast'] = Ext.JSON.encode(forecast);
 	 		}
 
 	 		var thresholds = {
 	 			warning: this.warning_threshold,
 	 			critical: this.critical_threshold
 	 		};
-	 		post_params['threshold'] = threshold;
+	 		post_params['thresholds'] = Ext.JSON.encode(thresholds);
  		}
  	}
 });

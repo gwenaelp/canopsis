@@ -173,7 +173,7 @@
 					"xtype": "checkbox",
 					"name": "time_serie_enable",
 					"fieldLabel": "Enable",
-					"checked": true
+					"checked": false
 				}, {
 					"xtype": "cfieldset",
 					"title": "Period",
@@ -205,8 +205,7 @@
 							"store": {
 								"xtype": "store",
 								"fields": ["value", "text"],
-								"data" : [
-									{"value": "", "text": "None"},
+								"data" : [									
 									{"value": "MAX", "text": "Max"},
 									{"value": "MIN", "text": "Min"},
 									{"value": "LAST", "text": "Last"},
@@ -216,8 +215,13 @@
 									{"value": "SUM", "text": "Sum"}
 								]
 							}
+						}, {
+							"xtype": "checkbox",
+							"name": "time_serie_fill",
+							"fieldLabel": "Fill empty points",
+							"checked": false
 						}
-					] // Period.items
+					]
 				}, {
 					"xtype": "cfieldset",
 					"title": "Consolidation between metrics",
@@ -242,7 +246,7 @@
 								]
 							}
 						}
-					] // Consolidation.items
+					]
 				}, {
 					"xtype": "cfieldset",
 					"title": "Forecast",
@@ -293,9 +297,9 @@
 							"value": 0,
 							"fieldLabel": "Warning threshold"
 						}
-					] // Forecast.items
+					]
 				}
-			] // Time serie.items
+			]
 		}, {					
 			"title": "Style",
 			"advanced": true,
