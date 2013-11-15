@@ -1568,7 +1568,6 @@ Ext.define('widgets.line_graph.line_graph', {
  	},
 
  	processPostParams: function(post_params) {
- 		console.log('plop');
  		if (this.time_serie_enable) {
 	 		var time_serie = {
 	 			max_points: this.time_serie_max_points,
