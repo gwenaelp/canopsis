@@ -687,27 +687,22 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
     if not c or c > ylen / 2:
         c = ylen >> 1
 
-    """
-    if ylen % c != 0:
-        return None
-    """
-
     fc =float(c)
 
     ybar2 =sum([y[i] for i in range(c, 2 * c)])/ fc
     ybar1 =sum([y[i] for i in range(c)]) / fc
     b0 =(ybar2 - ybar1) / fc
-    logger.debug("b0 = ", b0)
+    logger.debug("b0 = %s" % b0)
 
     #Compute for the level estimate a0 using b0 above.
     tbar = ((c * (c + 1)) >> 1) / fc
-    logger.debug("tbar = ", tbar)
+    logger.debug("tbar = %s" % tbar)
     a0 = ybar1 - b0 * tbar
-    logger.debug("a0 = ", a0)
+    logger.debug("a0 = %s" % a0)
 
     #Compute for initial indices
     I = [y[i] / (a0 + (i + 1) * b0) for i in range(0, ylen)]
-    logger.debug("Initial indices = ", I)
+    logger.debug("Initial indices = %s" % I)
 
     S = [0] * (ylen + c)
     for i in range(c):
@@ -717,7 +712,7 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
     tS = c / sum([S[i] for i in xrange(c)])
     for i in xrange(c):
         S[i] *= tS
-        logger.debug("S[",i,"]=", S[i])
+        logger.debug("S[%s]=%s" % (i, S[i]))
 
     # Holt - winters proper ...
     logger.debug("Use Holt Winters formulae")
@@ -732,13 +727,13 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
         Bt = beta * (At - Atm1) + (1 - beta) * Btm1
         S[i + c] = gamma * y[i] / At + (1.0 - gamma) * S[i]
         F[i] = (a0 + b0 * (i + 1)) * S[i]
-        logger.debug("i=", i + 1, "y=", y[i], "S=", S[i], "Atm1=", Atm1, "Btm1=",Btm1, "At=", At, "Bt=", Bt, "S[i+c]=", S[i+c], "F=", F[i])
+        logger.debug("i=%s, y=%s, S=%s, Atm1=%s, Btm1=%s, At=%s, Bt=%s, S[i+c]=%s, F=%s" % (i + 1, y[i], S[i], Atm1, Btm1, At, Bt, S[i+c], F[i]))
     #Forecast for next c periods:
     for m in xrange(c):
         F[ylen + m] = (At + Bt * (m + 1)) * S[ylen + m]
-        logger.debug("forecast:", F[ylen + m])
+        logger.debug("forecast: %s" % F[ylen + m])
 
-    logger.debug("F = " % F)
+    logger.debug("F = %s" % F)
 
     return F
 

@@ -41,8 +41,6 @@ manager = None
 logger = logging.getLogger("perfstore")
 logger.setLevel(logging.DEBUG)
 
-pyperfstore2.utils.logger = logger
-
 import ConfigParser
 
 config = ConfigParser.RawConfigParser()
