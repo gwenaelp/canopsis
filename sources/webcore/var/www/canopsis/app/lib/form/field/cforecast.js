@@ -17,14 +17,19 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-Ext.define('canopsis.lib.form.field.cperiod' , {
+Ext.define('canopsis.lib.form.field.cforecast' , {
 	extend: 'Ext.form.FieldContainer',
 	mixins: ['canopsis.lib.form.cfield'],
 
-	alias: 'widget.cperiod',
+	alias: 'widget.cforecast',
 
-	layout: 'hbox',
+	layout: 'vbox',
 
+	enable: false,
+	max_points: 250,
+	max_points_min: 1,
+
+	duration = {value: 1, unit: 'day'},
 	number_step: 1,
 	number_min_val: 0,
 
@@ -37,45 +42,32 @@ Ext.define('canopsis.lib.form.field.cperiod' , {
 		this.logAuthor = '[' + this.id + ']';
 		log.debug('Initialize ...', this.logAuthor);
 
-		this.ts_window = Ext.widget('numberfield', {
-			isFormField: false,
-			name: 'ts_window',
+		this.ts_enable = Ext.widget('checkbox', {
+			name: 'forecast_enable',
+			checked: this.enable,
+			labelField: 'Enable',
+		});
+		this.ts_max_points = Ext.widget('numberfield', {
+			name: 'forecast_max_points',
 			width: 50,
-			value:this.value.value,
-			minValue: this.number_min_val,
-			step: this.number_step
+			value: this.max_points,
+			minValue: this.max_points_min,
+			labelField: 'Max points'
 		});
-
-		var store_data = [
-			{name: _('Minute'), value: 'minute'},
-			{name: _('Hour'), value: 'hour'},
-			{name: _('Day'), value: 'day'},
-			{name: _('Week'), value: 'week'},
-			{name: _('Month'), value: 'month'},
-			{name: _('Year'), value: 'year'}
-		];
-
-		if(this.add_none_value) {
-			store_data.push({'name': _('None'), 'value': undefined});
-		}
-
-		this.ts_unit = Ext.widget('combobox', {
+		this.ts_duration = Ext.widget('cperiod', {
 			isFormField: false,
-			editable: false,
-			width: 97,
-			name: 'ts_unit',
-			queryMode: 'local',
-			displayField: 'name',
-			valueField: 'value',
-			value: this.value.unit,
-			store: {
-				xtype: 'store',
-				fields: ['value', 'name'],
-				data: store_data
-			}
+			name: 'ts_duration',			
+			value:this.duration,
+			minValue: this.number_min_val,
+			fieldLabel: 'Duration (if no max points)'
+		});
+		this.ts_date = Ext.widget('datefield', {
+			name: 'date',
+			value: this.date,
+			fieldLabel: 'End date (if no max points and no duration',
 		});
 
-		this.items = [this.ts_window, this.ts_unit];
+		this.items = [this.ts_enable, this.ts_max_points, this.ts_duration, this.ts_date];
 
 		this.callParent(arguments);
 

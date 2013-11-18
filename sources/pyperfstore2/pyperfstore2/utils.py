@@ -493,7 +493,9 @@ def get_aggregation_point(points_to_aggregate, fn, timestamp, fill):
 		
 		logger.debug("     + %s points to aggregate" % (len(points_to_aggregate)))
 
-		agvalue = round(fn(points_to_aggregate), 2)
+		_points_to_aggregate = [point for point in points_to_aggregate if point != None]
+
+		agvalue = round(fn(_points_to_aggregate), 2)
 
 		result = [timestamp, agvalue]
 
@@ -667,7 +669,7 @@ def consolidation(series, fn, interval=None):
 
 	return result
 
-def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
+def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, forecast=True):
     """
     y - time series data.
     alpha(0.2) , beta(0.1), gamma(0.05) - exponential smoothing coefficients 
@@ -684,8 +686,7 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
     #Compute initial b and intercept using the first two complete c periods.
     ylen =len(y)
 
-    if not c or c > ylen / 2:
-        c = ylen >> 1
+	c = min(c, ylen >> 1)
 
     fc =float(c)
 
@@ -706,7 +707,7 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
 
     S = [0] * (ylen + c)
     for i in range(c):
-        S[i] =(I[i] + I[i+c]) / 2.0
+        S[i] = (I[i] + I[i + c]) / 2.0
 
     #Normalize so S[i] for i in [0, c)  will add to c.
     tS = c / sum([S[i] for i in xrange(c)])
@@ -728,6 +729,14 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
         S[i + c] = gamma * y[i] / At + (1.0 - gamma) * S[i]
         F[i] = (a0 + b0 * (i + 1)) * S[i]
         logger.debug("i=%s, y=%s, S=%s, Atm1=%s, Btm1=%s, At=%s, Bt=%s, S[i+c]=%s, F=%s" % (i + 1, y[i], S[i], Atm1, Btm1, At, Bt, S[i+c], F[i]))
+
+	if forecast:
+		holtwinters_forecast(y, c, At, Bt, F)
+
+    return c, At, Bt, F
+
+def holtwinters_forecast(y, c, At, Bt, F):
+	ylen = len(y)
     #Forecast for next c periods:
     for m in xrange(c):
         F[ylen + m] = (At + Bt * (m + 1)) * S[ylen + m]
@@ -737,22 +746,90 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, debug=True):
 
     return F
 
+def get_forecast_parameters(category=None, alpha=ALPHA, beta=BETA, gamma=GAMMA):
+	return {'category': category, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
+
+NOT_LINEAR_MID_VARIABLE = 'NotLinearMidVariable'
+LINEAR_NOT_VARIABLE = 'LinearNotVariable'
+NOT_LINEAR_VARIABLE = 'NotLinearVariable'
+LINEAR_VARIABLE = 'LinearVariable'
+
+NotLinearMidVariable = get_forecast_parameters(category=NOT_LINEAR_MID_VARIABLE, alpha=0.99, beta=0.12, gamma=0.80)
+LinearNotVariable = get_forecast_parameters(category=LINEAR_NOT_VARIABLE, alpha=0.99, beta=0.01, gamma=0.97)
+NotLinearVariable = get_forecast_parameters(category=NOT_LINEAR_VARIABLE, alpha=0.60, beta=1, gamma=0.01)
+LinearVariable = get_forecast_parameters(category=LINEAR_VARIABLE, alpha=0.68, beta=0.01, gamma=0.17)
+
+FORECAST_PARAMETERS = [
+	LinearNotVariable,
+	LinearVariable,
+	NotLinearVariable,
+	NotLinearMidVariable
+]
+
+def forecast_best_effort(y, forecast_categories=FORECAST_PARAMETERS, c=sys.maxint, calculate_forecast=True):
+	"""
+	Identify best category for forecasting input y list.
+	Returns count of forecasting points, At and Bt parameters and holtwinter list. This list is filled if calculate_forecast is True.
+	"""
+	result = None
+
+	for forecast_category in forecast_categories:
+		c, At, Bt, F = holtwinters(y, forecast_category['alpha'], forecast_category['beta'], forecast_category['gamma'], c)
+		delta = _s = sum(map(lambda x: abs(x[0] - x[1]), zip(y, F)))
+		if result == None or forecast_category['delta'] > delta:
+			result = forecast_category
+	if calculate_forecast:
+		holtwinters_forecast(y, c, At, Bt, F)
+
+	return forecast_category, c, At, Bt, F
+
 def forecast(points, forecast):
+	"""
+	Get forecasted points from points and forecast properties.
+	"""
 
 	logger.debug('forecast: points: %s, forecast: %s' % (points, forecast))
 
-	y = [point[1] for point in points]
+	noneindexes = [ index for index, point in enumerate(points) if point[1] == None]
 
-	F = holtwinters(y, forecast.alpha, forecast.beta, forecast.gamma, forecast.max_points)
+	logger.debug('noneindexes: %s' % noneindexes)
+
+	# remove None values
+	y = [point[1] for point in points if point[1] != None]
+
+	# calculate forecasted points
+	if forecast.category==None: # best effort
+		forecast_category, c, At, Bt, F = forecast_best_effort(y, FORECAST_PARAMETERS, c)
+		forecast.category = forecast_category
+	else:
+		c, At, Bt, F = holtwinters(y, forecast.alpha, forecast.beta, forecast.gamma, forecast.max_points)
+
+	# add None in F
+	def insertnonevalues(F, noneindexes, index=0):
+		noneindexeslen = len(noneindexes)
+		for _index in xrange(0, noneindexeslen):
+			nonindex = noneindexes[_index]
+			F.insert(nonindex + index, None)
+
+	insertnonevalues(F, noneindexes)
+	insertnonevalues(F, noneindexes, len(y))
 
 	result = [ [z[0][0], z[1]] for z in zip(points, F[:len(points)])]
 
-	date = TimeWindow.get_datetime(points[-1][0])
+	date = datetime.fromtimestamp(points[-1][0])
+
+	logger.debug('last_point: %s, date: %s' % (points[-1], date))
 
 	for index in xrange(len(points), len(F)):
-		date = TimeWindow.get_next_date(date, forecast.timeserie.timewindow, forecast.timeserie.period)		
-		timestamp = time.mktime(date.utctimetuple())
+		date = TimeWindow.get_next_date(date, forecast.timeserie.timewindow, forecast.timeserie.period)
+		timestamp = time.mktime(date.timetuple())
 		point = [timestamp, F[index]]
 		result.append(point)
+
+	logger.debug('points: %s' % points)
+
+	logger.debug('result: %s' % result)
+
+	logger.debug('len(points): %s, len(y): %s, len(F): %s, len(result): %s' % (len(points), len(y), len(F), len(result)))
 
 	return result
