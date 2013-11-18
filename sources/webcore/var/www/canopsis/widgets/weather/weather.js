@@ -1,3 +1,4 @@
+//need:app/lib/view/cwidget.js,widgets/weather/brick.js
 /*
 # Copyright (c) 2011 "Capensis" [http://www.capensis.com]
 #
@@ -19,9 +20,13 @@
 
 Ext.define('widgets.weather.weather' , {
 	extend: 'canopsis.lib.view.cwidget',
-
 	alias: 'widget.weather',
-	logAuthor: '[widget][weather]',
+	logAuthor: '[widgets][weather]',
+
+	requires: [
+		'widgets.weather.brick'
+	],
+
 	border: false,
 
 	cls: 'widget-weather',
@@ -225,7 +230,10 @@ Ext.define('widgets.weather.weather' , {
 				var that = this;
 
 				data.sort(function(a, b) {
-					return that.nodesByID[a['node']]['order'] - that.nodesByID[b['node']]['order'];
+					var node_a = that.nodesByID[that.matchingDictMeta[a.node]];
+					var node_b = that.nodesByID[that.matchingDictMeta[b.node]];
+
+					return node_a.order - node_b.order;
 				});
 
 				for(i = 0; i < data.length; i++) {
