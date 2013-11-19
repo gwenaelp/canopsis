@@ -38,6 +38,21 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	fieldLabel: undefined,
 
+	Custom = {category: "Custom", demand: 0, beta: 0, trend: 0},
+	NotLinearMidVariable = {category:"Not linear mid variable", demand:0.99, beta:0.12, trend:0.80},
+	LinearNotVariable = {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
+	NotLinearVariable = {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
+	LinearVariable = {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
+
+	category = this.NotLinearMidVariable,
+
+	demand: 0.99,
+	seasonality: 0.12,
+	trend: 0.8,
+
+	critical_threshold: 0,
+	warning_threshold: 0,
+
 	initComponent: function() {
 		this.logAuthor = '[' + this.id + ']';
 		log.debug('Initialize ...', this.logAuthor);
@@ -67,7 +82,72 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			fieldLabel: 'End date (if no max points and no duration',
 		});
 
-		this.items = [this.ts_enable, this.ts_max_points, this.ts_duration, this.ts_date];
+		var category_store_data [
+			{'name': _(NotLinearMidVariable.category), 'value': NotLinearMidVariable},
+			{'name': _(LinearNotVariable.category), 'value': LinearNotVariable},
+			{'name': _(LinearVariable.category), 'value': LinearVariable},
+			{'name': _(LinearVariable.category), 'value': LinearVariable},
+			{'name': _(Custom.category), 'value': Custom},
+		];
+
+		// algorithm parametes
+		this.ts_category = Ext.widget('combobox', {
+			isFormField: false,
+			editable: false,
+			width: 97,
+			name: 'category',
+			queryMode: 'local',
+			displayField: 'name',
+			valueField: 'value',
+			labelField: 'Category',
+			store: {
+				xtype: 'store',
+				fields: ['value', 'name'],
+				data: category_store_data
+			}
+		});
+		this.ts_demand = Ext.widget('numberfield', {
+			name: 'demand',
+			value: this.demand,
+			fieldLabel: 'Demand (alpha)'
+		});
+		this.ts_seasonality = Ext.widget('numberfield', {
+			name: 'seasonality',
+			value: this.seasonality,
+			fieldLabel: 'Seasonality (beta)'
+		});
+		this.ts_trend = Ext.widget('numberfield', {
+			name: 'trend',
+			value: this.trend,
+			fieldLabel: 'Trend (gamma)'
+		});
+		this.ts_trend = Ext.widget('numberfield', {
+			name: 'trend',
+			value: this.trend,
+			fieldLabel: 'Trend (gamma)'
+		});
+		this.ts_warning_threshold = Ext.widget('numberfield', {
+			name: 'warning_threshold',
+			value: this.warning_threshold,
+			fieldLabel: 'Warning Threshold'
+		});
+		this.ts_critical_threshold = Ext.widget('numberfield', {
+			name: 'critical_threshold',
+			value: this.critical_threshold,
+			fieldLabel: 'Critical threshols'
+		});
+		this.items = [
+			this.ts_enable, 
+			this.ts_max_points, 
+			this.ts_duration, 
+			this.ts_date,
+			this.ts_category,
+			this.ts_demand,
+			this.ts_seasonality,
+			this.ts_trend,
+			this.ts_warning_threshold,
+			this.ts_critical_threshold
+		];
 
 		this.callParent(arguments);
 
@@ -88,32 +168,36 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	show: function() {
 		this.callParent(arguments);
-		this.ts_window.show();
-		this.ts_window.setDisabled(false);
-		this.ts_unit.show();
-		this.ts_unit.setDisabled(false);
+		for (int i=1; i<this.items.length; i++) {
+			item = this.items[i];
+			item.show();
+			item.setDisabled(false);
+		};
 	},
 
 	hide: function() {
 		this.callParent(arguments);
-		this.ts_window.hide();
-		this.ts_window.setDisabled(true);
-		this.ts_unit.hide();
-		this.ts_unit.setDisabled(true);
+		for (int i=1; i<this.items.length; i++) {
+			item = this.items[i];
+			item.hide();
+			item.setDisabled(true);
+		};
 	},
 
 	getValue: function() {
-		if(!this.ts_unit.getValue()) {
-			return undefined;
-		}
+		result = {};
 
-		return {value: this.ts_window.getValue(), unit: this.ts_unit.getValue()};
+		for (int i=1; i<this.items.length; i++) {
+			item = this.items[i];
+			result[item.getName()] = item.getValue();
+		};
+
+		return result;
 	},
 
 	setValue: function(value) {
 		if(value) {
-			this.ts_window.setValue(value.value);
-			this.ts_unit.setValue(value.unit);
+
 		}
 		else {
 			this.ts_unit.select(this.ts_unit.getStore().data.items[0]);

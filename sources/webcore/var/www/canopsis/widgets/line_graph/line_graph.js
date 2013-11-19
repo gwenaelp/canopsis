@@ -69,6 +69,7 @@ Ext.define('widgets.line_graph.line_graph', {
 	extend: 'canopsis.lib.view.cperfstoreValueConsumerWidget',
 
 	alias: 'widget.line_graph',
+	logAuthor: '[widgets][line_graph]',
 
 	layout: 'fit',
 
@@ -172,8 +173,6 @@ Ext.define('widgets.line_graph.line_graph', {
 
 	initComponent: function() {
 		this.callParent(arguments);
-
-		this.logAuthor = '[widgets][line_graph]';
 
 		this.backgroundColor        = check_color(this.backgroundColor);
 		this.borderColor            = check_color(this.borderColor);
@@ -651,13 +650,14 @@ Ext.define('widgets.line_graph.line_graph', {
 				var e = serie.xAxis.getExtremes();
 				var time_window = e.max - e.min;
 
-				if(this.reportMode) {
-					this.stopTask();
-					serie.xAxis.setExtremes(from, to, false);
-				}
-				else {
+				if(!this.reportMode) {
 					serie.xAxis.setExtremes(now - time_window, now, false);
 				}
+			}
+
+			if(this.reportMode) {
+				this.stopTask();
+				this.chart.xAxis[0].setExtremes(from, to, false);
 			}
 
 			this.refreshNodes(from, to);

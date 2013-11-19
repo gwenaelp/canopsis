@@ -41,25 +41,6 @@ manager = None
 logger = logging.getLogger("perfstore")
 logger.setLevel(logging.DEBUG)
 
-import ConfigParser
-
-config = ConfigParser.RawConfigParser()
-
-config.read(os.path.expanduser('~/etc/webserver.conf'))
-pyperfstore_aggregate			= True
-pyperfstore_aggregate_maxpoints	= 500
-pyperfstore_aggregate_method	= "MAX"
-try:
-	pyperfstore_aggregate			= config.getboolean('pyperfstore', "aggregate")
-	pyperfstore_aggregate_maxpoints	= config.getint('pyperfstore', "aggregate_maxpoints")
-	pyperfstore_aggregate_method	= config.get('pyperfstore', "aggregate_method")
-except:
-	pass
-	
-logger.debug(" + pyperfstore_aggregate: %s" % pyperfstore_aggregate)
-logger.debug(" + pyperfstore_aggregate_maxpoints: %s" % pyperfstore_aggregate_maxpoints)
-logger.debug(" + pyperfstore_aggregate_method: %s" % pyperfstore_aggregate_method)
-
 def load():
 	global manager
 	manager = pyperfstore2.manager(logging_level=logging.INFO)
@@ -85,6 +66,7 @@ def perfstore_nodes_get_values(start=None, stop=None):
 
 	interval = None
 	metas = request.params.get('nodes', default=None)
+<<<<<<< HEAD
 
 	timeserie = request.params.get(TIMESERIE, default=None)
 	forecast = request.params.get(FORECAST, default=None)
@@ -117,6 +99,18 @@ def perfstore_nodes_get_values(start=None, stop=None):
 
 	output = []
 
+=======
+		
+	aggregate_method			= request.params.get('aggregate_method', default=None)
+	aggregate_interval			= request.params.get('aggregate_interval', default=None)
+	aggregate_max_points		= request.params.get('aggregate_max_points', default=None)
+	aggregate_round_time        = request.params.get('aggregate_round_time', default=None)
+	consolidation_method 		= request.params.get('consolidation_method', default=None)
+	timezone                    = request.params.get('timezone', default=0)
+
+	output = []
+	
+>>>>>>> develop
 	if not metas:
 		logger.warning("Invalid arguments")
 		return HTTPError(404, "Invalid arguments")
@@ -124,6 +118,7 @@ def perfstore_nodes_get_values(start=None, stop=None):
 	metas = json.loads(metas)
 
 	logger.debug("POST:")
+<<<<<<< HEAD
 	logger.debug(" + metas: %s" % metas)
 	logger.debug("timewindow: %s" % timewindow)
 	logger.debug("timeserie: %s" % timeserie)
@@ -131,6 +126,15 @@ def perfstore_nodes_get_values(start=None, stop=None):
 	logger.debug("thresholds: %s" % thresholds)
 	logger.debug("consolidation_method: %s" % consolidation_method)
 	logger.debug("timezone: %s" % timezone)
+=======
+	logger.debug(" + metas: %s" % metas)	
+	logger.debug(" + aggregate_method: %s" % aggregate_method)
+	logger.debug(" + aggregate_interval: %s" % aggregate_interval)
+	logger.debug(" + aggregate_max_points: %s" % aggregate_max_points)
+	logger.debug(" + aggregate_round_time: %s" % aggregate_round_time)
+	logger.debug(" + consolidation_method: %s" % consolidation_method)
+	logger.debug(" + timezone: %s" % timezone)
+>>>>>>> develop
 
 	output = []
 
@@ -145,6 +149,7 @@ def perfstore_nodes_get_values(start=None, stop=None):
 		timewindow.stop = mstop
 
 		if _id:
+<<<<<<< HEAD
 			values = perfstore_get_values(	_id=meta['id'],
 											timewindow=timewindow,
 											timeserie=timeserie,
@@ -153,9 +158,19 @@ def perfstore_nodes_get_values(start=None, stop=None):
 											timezone=timezone)
 
 			output += values
+=======
+			output += perfstore_get_values(	_id=meta['id'],
+											start=mstart,
+											stop=mstop,
+											aggregate_method=aggregate_method,
+											aggregate_interval=aggregate_interval,
+											aggregate_max_points=aggregate_max_points,
+											aggregate_round_time=aggregate_round_time,
+											timezone=time.timezone)
+>>>>>>> develop
 
-	if consolidation_method and len(output) != 0:
-		##select right function
+	if consolidation_method and len(output) and aggregate_method != 0:
+		# select right function
 		if consolidation_method == 'average':
 			fn = pyperfstore2.utils.average
 		elif consolidation_method == 'min':
@@ -504,15 +519,36 @@ def perfstore_perftop(start=None, stop=None):
 			data = sorted(data, key=lambda k: k['lv'], reverse=reverse)[:limit]
 	else:
 		logger.debug("No records found")
+<<<<<<< HEAD
 
 
+=======
+	
+>>>>>>> develop
 	return {'success': True, 'data' : data, 'total' : len(data)}
 
 ########################################################################
 # Functions
 ########################################################################
 
+<<<<<<< HEAD
 def perfstore_get_values(_id, timewindow, timeserie=None, forecast=None, thresholds=None, timezone=time.timezone):
+=======
+def perfstore_get_values(_id, start=None, stop=None, aggregate_method=None, aggregate_interval=None, aggregate_max_points=None, aggregate_round_time=True, timezone=0):
+	
+	if start and not stop:
+		stop = start
+	
+	if stop:
+		stop = int(stop)
+	else:
+		stop = int(time.time())
+		
+	if start:
+		start = int(start)
+	else:
+		start = stop - 86400
+>>>>>>> develop
 
 	logger.debug("Perfstore get points:")
 	logger.debug(" + meta _id:    %s" % _id)
@@ -527,6 +563,13 @@ def perfstore_get_values(_id, timewindow, timeserie=None, forecast=None, thresho
 		logger.error("Invalid _id '%s'" % _id)
 		return output
 
+<<<<<<< HEAD
+=======
+	if aggregate_interval:
+		aggregate_max_points = int( round((stop - start) / aggregate_interval + 0.5) )
+		fill = True
+	
+>>>>>>> develop
 	try:
 		points = []
 		F = []
@@ -558,6 +601,7 @@ def perfstore_get_values(_id, timewindow, timeserie=None, forecast=None, thresho
 				# Insert null point for aggregation
 				points.insert(0, [points[0][0], 0])
 
+<<<<<<< HEAD
 			if len(points) and timeserie:
 				logger.debug('time serie')
 				points =  pyperfstore2.utils.timeserie(points=points,
@@ -565,6 +609,17 @@ def perfstore_get_values(_id, timewindow, timeserie=None, forecast=None, thresho
 														timeserie=timeserie,
 														forecast=forecast,
 														thresholds=thresholds,
+=======
+			if len(points) and aggregate_method:
+				points =  pyperfstore2.utils.aggregate(	points=points,
+														max_points=aggregate_max_points,
+														interval=aggregate_interval,
+														atype=aggregate_method,
+														start=start,
+														stop=stop,
+														fill=fill,
+														roundtime = aggregate_round_time,
+>>>>>>> develop
 														timezone=timezone)
 
 				logger.debug('time serie %s' % len(points))
