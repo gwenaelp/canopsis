@@ -146,23 +146,28 @@ Ext.define('widgets.line_graph.line_graph', {
 	lastShift: undefined,
 
 	// specific to time serie
-	time_serie_enable: false,
-	time_serie_max_points: 500,
-	time_serie_period: {'value': 1, 'unit': 'day'},
-	time_serie_sliding_time: true,
-	time_serie_operation: 'MEAN',	
-	time_serie_fill: false,
+	time_serie: {
+		enable: false,
+		max_points: 500,
+		period: {
+			value: 1,
+			unit: 'day'
+		},
+		sliding_time: true,
+		operation: 'MEAN',
+		fill: false,
+		forecast: {
+			enable: false,
+			max_points: 250,
+			date: undefined,
+			duration: undefined,
+			type: 'NotLinearMidVariable',
+			alpha: 0.99,
+			beta: 0.12,
+			gamma: 0.80
+		}
+	},
 
-	// forecast
-	forecast_enable: false,
-	forecast_max_points: 250,
-	forecast_date: undefined,
-	forecast_duration: undefined,
-	forecast_alpha: 0.99,
-	forecast_beta: 0.12,
-	forecast_gamma: 0.80,
-	//l0: 5.30,
-	//b0: 0.71
 	// not linear and mid-variable: 0.99, 0.12, 0.80, 5.30, 0.71
 	// linear: 0.99, 0.01, 0.97, 262.5, 1.12
 	// not linear and variable: alpha: 0.60, gamma: 0.01, l0: 343.5
@@ -1106,6 +1111,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		var values = data['values'];
 		var bunit = data['bunit'];
 		var node_id = data['node'];
+		var node = this.nodesByID[node_id];
 		var min = data['min'];
 		var max = data['max'];
 		var type = data['type'];
@@ -1164,9 +1170,21 @@ Ext.define('widgets.line_graph.line_graph', {
 		}
 
 		//Add war/crit line if on first serie
+		var thld_warn = data['thld_warn'];
+
+		if(node['threshold_warn']) {
+			thld_warn = node['threshold_warn'];
+		}
+
+		var thld_crit = data['thld_crit'];
+
+		if(node['threshold_crit']) {
+			thld_crit = node['threshold_crit'];
+		}
+
 		if(this.chart.series.length === 1 && this.showWarnCritLine) {
-			if(data['thld_warn']) {
-				value = data['thld_warn'];
+			if(thld_warn) {
+				value = thld_warn;
 
 				if(this.SeriePercent && serie.options.max > 0) {
 					value = getPct(value, serie.options.max);
@@ -1175,8 +1193,8 @@ Ext.define('widgets.line_graph.line_graph', {
 				this.addPlotlines('pl_warning', value, 'orange');
 			}
 
-			if(data['thld_crit']) {
-				value = data['thld_crit'];
+			if(thld_crit) {
+				value = thld_crit;
 
 				if(this.SeriePercent && serie.options.max > 0) {
 					value = getPct(value, serie.options.max);

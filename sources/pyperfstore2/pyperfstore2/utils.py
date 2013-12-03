@@ -17,6 +17,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 # ---------------------------------
+
+import sys
 import logging
 logger = logging.getLogger('utils')
 logger.setLevel(logging.DEBUG)
@@ -32,49 +34,31 @@ import calendar
 from datetime import datetime, timedelta
 from dateutil.relativedelta import *
 
-MEAN = 'MEAN'
-LAST = 'LAST'
-FIRST = 'FIRST'
-DELTA = 'DELTA'
-SUM = 'SUM'
-MAX = 'MAX'
-MIN = 'MIN'
-
-T_SECOND = 'second'
-T_MINUTE = 'minute'
-T_HOUR = 'hour'
-T_DAY = 'day'
-T_WEEK = 'week'
-T_MONTH = 'month'
-T_YEAR = 'year'
-
-T_UNITS = [T_SECOND, T_MINUTE, T_HOUR, T_DAY, T_WEEK, T_MONTH, T_YEAR]
-
-VALUE = 'value'
-UNIT = 'unit'
-
-MAX_POINTS = 500
-
-FORECAST_MAX_POINTS = MAX_POINTS / 2
-
-ALPHA = 0.99
-BETA = 0.12
-GAMMA = 0.80
-
 class Period(object):
 	"""
 	Period management with a value and an unit.
 	"""
-	def __init__(self, value=1, unit=T_SECOND):
+
+	SECOND = 'second'
+	MINUTE = 'minute'
+	HOUR = 'hour'
+	DAY = 'day'
+	WEEK = 'week'
+	MONTH = 'month'
+	YEAR = 'year'
+
+	UNITS = [Period.SECOND, Period.MINUTE, Period.HOUR, Period.DAY, Period.WEEK, Period.MONTH, Period.YEAR]	
+
+	def __init__(self, value=1, unit=Period.SECOND):
 		self.value = value
 		self.unit = unit
 
 	def get_delta(self, date, delta=None):
 		result = delta
 
-		if (self.unit == T_YEAR or self.unit == T_MONTH) and float.is_integer(self.value):
+		if (self.unit == Period.YEAR or self.unit == Period.MONTH) and float.is_integer(self.value):
 			# force new delta in case of year or month unit
-			if self.unit == T_YEAR:
+			if self.unit == Period.YEAR:
 				days = int(period.value * (366 if calendar.isleap(date.year) else 365))
 
 			else :
@@ -87,7 +71,7 @@ class Period(object):
 
 			kwargs = {self.unit + 's': self.value}
 
-			if self.unit == T_MONTH or self.unit == T_YEAR:
+			if self.unit == Period.MONTH or self.unit == Period.YEAR:
 				result = relativedelta(**kwargs)
 
 			else:
@@ -100,19 +84,20 @@ class TimeWindow(object):
 	Time window management with exclusion intervals.
 	Contains a start/stop dates and an array of exclusion intervals (couple of START, STOP timestamp).
 	"""
+
 	def __init__(self, start, stop=time.time(), exclusion_intervals=[]):
 		self.start = start if start else stop - 60 * 60 * 24
 		self.stop = stop
 		self.exclusion_intervals = self._get_exclusion_intervals(exclusion_intervals)
 		self._delta = None
 	
-	def _get_exclusion_intervals(self, exclusion_intervals):
-		return exclusion_intervals # should sort and simplify exclusion intervals
-
 	def __repr__(self):
 		message = "start = %s, stop = %s, exclusion_intervals = %s"
 		result = message % (self.start, self.stop, self.exclusion_intervals)
 		return result
+
+	def _get_exclusion_intervals(self, exclusion_intervals):
+		return exclusion_intervals # should sort and simplify exclusion intervals
 
 	def total_seconds(self):
 		delta = self.stop - self.start
@@ -127,7 +112,7 @@ class TimeWindow(object):
 		return result
 
 	@staticmethod
-	def roundtime(utcdate, period, timezone=time.timezone):
+	def sliding_time(utcdate, period, timezone=time.timezone):
 		"""
 		Calculate roudtime relative to an UTC date, a period time/type and a timezone.
 		"""
@@ -139,23 +124,23 @@ class TimeWindow(object):
 		# assume result does not contain seconds and microseconds in this case
 		result = result.replace(second=0, microsecond=0)
 
-		if period.unit == T_SECOND:
+		if period.unit == Period.SECOND:
 			seconds = (result.second * 60 / period.value) * period.value / 60
 			result = result.replace(second=seconds)
 
-		elif period.unit == T_MINUTE:
+		elif period.unit == Period.MINUTE:
 			minutes = (result.minute * 60 / period.value) * period.value / 60
 			result = result.replace(minute=minutes)
 
 		else:
 			result = result.replace(minute=0)
 
-			index_unit = T_UNITS.index(period.unit)
+			index_unit = Period.UNITS.index(period.unit)
 
-			if index_unit >= T_UNITS.index(T_DAY): # >= 1 day
+			if index_unit >= Period.UNITS.index(Period.DAY): # >= 1 day
 				result = result.replace(hour=0)
 
-				if index_unit >= T_UNITS.index(T_WEEK): # >= 1 week
+				if index_unit >= Period.UNITS.index(Period.WEEK): # >= 1 week
 
 					weeks = calendar.monthcalendar(result.year, result.month)
 					for week in weeks:
@@ -163,10 +148,10 @@ class TimeWindow(object):
 							result = result.replace(day=week[0] if week[0]!=0 else 1)
 							break
 
-				if index_unit >= T_UNITS.index(T_MONTH): # >= 1 month
+				if index_unit >= Period.UNITS.index(Period.MONTH): # >= 1 month
 					result = result.replace(day=1)
 
-					if index_unit >= T_UNITS.index(T_YEAR): # >= 1 year
+					if index_unit >= Period.UNITS.index(Period.YEAR): # >= 1 year
 						result = result.replace(month=1)
 
 		result += dt
@@ -178,6 +163,7 @@ class TimeWindow(object):
 		"""
 		Get next date of input date with timewindow parameters, period and optionnaly a previous calculated delta.
 		"""
+
 		delta = period.get_delta(date, delta)
 		# check if next date is in exclusion dates of the input timewindow
 		result = date + delta
@@ -188,6 +174,7 @@ class TimeWindow(object):
 		"""
 		Get previous date of input date with timewindow parameters, period and optionnaly a previous calculated delta. 
 		"""
+
 		delta = period.get_delta(date, delta)
 		# check if next date is in exclusion dates of the input timewindow
 		result = date - delta
@@ -197,69 +184,125 @@ class TimeSerie(object):
 	"""
 	Time serie management. Contain a TimeWindow, a period, a sliding_time, an operation and fill property.
 	"""
-	def __init__(self, timewindow, max_points=MAX_POINTS, period=None, sliding_time=True, operation=MEAN, fill=False):
-		self.timewindow = timewindow
+
+	MAX_POINTS = 500
+
+	MEAN = 'MEAN'
+	LAST = 'LAST'
+	FIRST = 'FIRST'
+	DELTA = 'DELTA'
+	SUM = 'SUM'
+	MAX = 'MAX'
+	MIN = 'MIN'
+
+	def __init__(self, max_points=TimeSerie.MAX_POINTS, period=None, sliding_time=True, operation=TimeSerie.MEAN, fill=False, forecast=None):
 		self.period = self._get_period(max_points, period)
 		self.sliding_time = sliding_time
 		self.operation = operation
 		self.fill = fill
+		self.forecast = Forecast(**forecast)
 
 	def __repr__(self):
-		message = "timewindow: %s, period: %s, sliding_time: %s, operation: %s, fill: %s"
-		result = message % (self.timewindow, self.period, self.sliding_time, self.operation, self.fill)
+		message = "period: %s, sliding_time: %s, operation: %s, fill: %s"
+		result = message % (self.period, self.sliding_time, self.operation, self.fill)
 		return result
 
 	def _get_period(self, max_points, period):
-		result = Period(value=period[VALUE], unit=period[UNIT]) if period!=None else None
+		result = Period(value=period[VALUE], unit=period[UNIT]) if period != None else None
 
 		if result == None and max_points :
 			interval = self.timewindow.stop - self.timewindow.start
 			seconds = interval.total_seconds() / max_points # may reduce value with timewindow.exclusion_intervals
-			result = Period(value=seconds, unit=T_SECOND)
+			result = Period(value=seconds)
 
-		return result
-
-	@staticmethod
-	def get_timeserie(**kwargs):
-		result = TimeSerie(**kwargs)
 		return result
 
 class Forecast(object):
 	"""
-	Forecast management
+	Forecast management.
 	"""
-	def __init__(self, timeserie, max_points=FORECAST_MAX_POINTS, date=None, duration=None, alpha=ALPHA, beta=BETA, gamma=GAMMA):
+
+	ALPHA = 0.99
+	BETA = 0.12
+	GAMMA = 0.80
+
+	MAX_POINTS = TimeSerie.__MAX_POINTS / 2
+
+	NOT_LINEAR_MID_VARIABLE = 'NotLinearMidVariable'
+	LINEAR_NOT_VARIABLE = 'LinearNotVariable'
+	NOT_LINEAR_VARIABLE = 'NotLinearVariable'
+	LINEAR_VARIABLE = 'LinearVariable'
+
+	CURVE_TYPE = 'curve_type'
+
+	NotLinearMidVariable = {'curve_type'=NOT_LINEAR_MID_VARIABLE, 'alpha'=0.99, 'beta'=0.12, 'gamma'=0.80)
+	LinearNotVariable = {'curve_type'=LINEAR_NOT_VARIABLE, 'alpha'=0.99, 'beta'=0.01, 'gamma'=0.97}
+	NotLinearVariable = {'curve_type'=NOT_LINEAR_VARIABLE, 'alpha'=0.60, 'beta'=1, 'gamma'=0.01}
+	LinearVariable = {'curve_type'=LINEAR_VARIABLE, 'alpha'=0.68, 'beta'=0.01, 'gamma'=0.17}
+
+	PARAMETERS = [
+		LinearNotVariable,
+		LinearVariable,
+		NotLinearVariable,
+		NotLinearMidVariable
+	]
+
+	def __init__(self, timeserie, max_points=FORECAST.MAX_POINTS, date=None, duration=None, parameters=FORECAST.NotLinearMidVariable, threshold=Threshold()):
 		self.timeserie = timeserie
 		self.max_points = max_points
 		self.date = date
 		self.duration = duration
-		self.alpha = alpha
-		self.beta = beta
-		self.gamma = gamma
+		self.parameters = parameters
 
 	def __repr__(self):
-		message = "time_serie: %s, max_points: %s, date: %s, duration: %s, alpha: %s, beta: %s, gamma: %s"
-		result = message % (self.timeserie, self.max_points, self.date, self.duration, self.alpha, self.beta, self.gamma)
+		message = "time_serie: %s, max_points: %s, date: %s, duration: %s, parameters: %s"
+		result = message % (self.timeserie, self.max_points, self.date, self.duration, self.parameters)
 		return result
 
-class Thresholds(object):
+class Threshold(object):
 	"""
-	Thresholds management
+	Forecast threshold.
 	"""
-	def __init__(self, warning=0, critical=0):
-		self.warning = warning
-		self.critical = critical
 
-	def __repr__(self):
-		message = "warning: %s, critical: %s"
-		result = message % (self.warning, self.critical)
+	POURCENT = '%'
+	KILO = 'K'
+	MEGA = 'M'
+	GIGA = 'G'
+	TERA = 'T'
+
+	def __init__(self, value=10, unit=POURCENT):
+
+		self.value = value
+		self.unit = unit
+
+	def _get_value(self, value, operation):
+
+		result = value + self.value
+
+		if self.unit == POURCENT:
+			delta = self.value * value / 100
+
+		else:
+			delta = self.value				
+			if self.unit == Threshold.KILO:
+				delta *= 1000
+			elif self.unit == Threshold.MEGA:
+				delta *= 1000 * 1000
+			elif self.unit == Threshold.GIGA:
+				delta *= 1000 * 1000 * 1000
+			elif self.unit == Threshold.TERA:
+				delta *= 1000 * 1000 * 1000 * 1000
+
+		result = getattr(value, operation)(delta)
+
 		return result
 
-	@staticmethod
-	def get_thresholds(**kwargs):
-		return Thresholds(**kwargs)
+	def get_add_value(self, value=10, unit=POURCENT):
+		result = self._get_value(value, unit, '__add__')
 
-#### Utils fn
+	def get_sub_value(self, value=10, unit=POURCENT):
+		result = self._get_value(value, unit, '__sub__')
+
 def datetimeToTimestamp(_date):
 	return time.mktime(_date.timetuple())
 
@@ -376,7 +419,7 @@ def parse_dst(points, dtype, first_point=[]):
 	
 	return points
 
-def getTimeSteps(timeserie, roundtime, timezone=time.timezone):
+def getTimeSteps(timeserie, sliding_time, timezone=time.timezone):
 	logger.debug('getTimeSteps:')
 
 	timeSteps = []
@@ -386,8 +429,8 @@ def getTimeSteps(timeserie, roundtime, timezone=time.timezone):
 	start_datetime 	= datetime.utcfromtimestamp(timeserie.timewindow.start)
 	stop_datetime 	= datetime.utcfromtimestamp(timeserie.timewindow.stop)
 
-	if roundtime:
-		stop_datetime = TimeWindow.roundtime(stop_datetime, timeserie.period, timezone)
+	if sliding_time:
+		stop_datetime = TimeWindow.sliding_time(stop_datetime, timeserie.period, timezone)
 
 	date = stop_datetime
 	start_delta = timeserie.period.get_delta(start_datetime)
@@ -427,9 +470,9 @@ def get_operation(name):
 
 	return result
 
-def timeserie(points, timewindow, timeserie, forecast, thresholds, agfn=None, timezone=time.timezone):
+def timeserie(points, timewindow, timeserie, thresholds, agfn=None, timezone=0):
 	
-	logger.debug("Aggregate %s points (timewindow: %s, timeserie: %s, forecast: %s, thresholds: %s, operator: %s, timezone: %s)" % (len(points), timewindow, timeserie, forecast, thresholds, agfn, timezone))
+	logger.debug("Aggregate %s points (timewindow: %s, timeserie: %s, thresholds: %s, operator: %s, timezone: %s)" % (len(points), timewindow, timeserie, thresholds, agfn, timezone))
 
 	if not agfn:
 		agfn = get_operation(timeserie.operation)
@@ -615,7 +658,7 @@ def uncompress(data):
 	return rpoints
 
 ### aggregation serie function
-def consolidation(series, fn, interval=None):
+def crush_series(series, fn, interval=None):
 	
 	# Todo calcul interval
 	if not interval:
@@ -669,7 +712,7 @@ def consolidation(series, fn, interval=None):
 
 	return result
 
-def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, forecast=True):
+def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=sys.maxint, forecast=True):
     """
     y - time series data.
     alpha(0.2) , beta(0.1), gamma(0.05) - exponential smoothing coefficients 
@@ -681,6 +724,7 @@ def holtwinters(y, alpha=ALPHA, beta=BETA, gamma=GAMMA, c=0, forecast=True):
 
     The length of y must be a an integer multiple (> 2) of c.
     """
+
     logger.debug("y = %s, alpha = %s, beta = %s, gamma = %s, c = %s" % (y, alpha, beta, gamma, c))
 
     #Compute initial b and intercept using the first two complete c periods.
@@ -746,44 +790,27 @@ def holtwinters_forecast(y, c, At, Bt, F):
 
     return F
 
-def get_forecast_parameters(category=None, alpha=ALPHA, beta=BETA, gamma=GAMMA):
-	return {'category': category, 'alpha': alpha, 'beta': beta, 'gamma': gamma}
-
-NOT_LINEAR_MID_VARIABLE = 'NotLinearMidVariable'
-LINEAR_NOT_VARIABLE = 'LinearNotVariable'
-NOT_LINEAR_VARIABLE = 'NotLinearVariable'
-LINEAR_VARIABLE = 'LinearVariable'
-
-NotLinearMidVariable = get_forecast_parameters(category=NOT_LINEAR_MID_VARIABLE, alpha=0.99, beta=0.12, gamma=0.80)
-LinearNotVariable = get_forecast_parameters(category=LINEAR_NOT_VARIABLE, alpha=0.99, beta=0.01, gamma=0.97)
-NotLinearVariable = get_forecast_parameters(category=NOT_LINEAR_VARIABLE, alpha=0.60, beta=1, gamma=0.01)
-LinearVariable = get_forecast_parameters(category=LINEAR_VARIABLE, alpha=0.68, beta=0.01, gamma=0.17)
-
-FORECAST_PARAMETERS = [
-	LinearNotVariable,
-	LinearVariable,
-	NotLinearVariable,
-	NotLinearMidVariable
-]
-
-def forecast_best_effort(y, forecast_categories=FORECAST_PARAMETERS, c=sys.maxint, calculate_forecast=True):
+def forecast_best_effort(y, forecast_parameters=FORECAST.PARAMETERS, c=sys.maxint, calculate_forecast=True):
 	"""
 	Identify best category for forecasting input y list.
 	Returns count of forecasting points, At and Bt parameters and holtwinter list. This list is filled if calculate_forecast is True.
 	"""
+
 	result = None
 
-	for forecast_category in forecast_categories:
-		c, At, Bt, F = holtwinters(y, forecast_category['alpha'], forecast_category['beta'], forecast_category['gamma'], c)
-		delta = _s = sum(map(lambda x: abs(x[0] - x[1]), zip(y, F)))
-		if result == None or forecast_category['delta'] > delta:
-			result = forecast_category
+	for forecast_parameter in forecast_parameters:
+		c, At, Bt, F = holtwinters(y, forecast_parameter['alpha'], forecast_parameter['beta'], forecast_parameter['gamma'], c)
+		delta = sum(map(lambda x: abs(x[0] - x[1]), zip(y, F)))		
+		if result == None or result['delta'] > delta:
+			result = forecast_parameter
+		else:
+			result['delta'] = delta
 	if calculate_forecast:
 		holtwinters_forecast(y, c, At, Bt, F)
 
-	return forecast_category, c, At, Bt, F
+	return result, c, At, Bt, F
 
-def forecast(points, forecast):
+def forecast(points, timewindow, forecast):
 	"""
 	Get forecasted points from points and forecast properties.
 	"""
@@ -798,11 +825,11 @@ def forecast(points, forecast):
 	y = [point[1] for point in points if point[1] != None]
 
 	# calculate forecasted points
-	if forecast.category==None: # best effort
-		forecast_category, c, At, Bt, F = forecast_best_effort(y, FORECAST_PARAMETERS, c)
-		forecast.category = forecast_category
+	if forecast.parameters==None: # best effort
+		forecast_parameters, c, At, Bt, F = forecast_best_effort(y, FORECAST_PARAMETERS, c)
+		forecast.parameters = forecast_parameters
 	else:
-		c, At, Bt, F = holtwinters(y, forecast.alpha, forecast.beta, forecast.gamma, forecast.max_points)
+		c, At, Bt, F = holtwinters(y, forecast.parameters.alpha, forecast.parameters.beta, forecast.parameters.gamma, forecast.max_points)
 
 	# add None in F
 	def insertnonevalues(F, noneindexes, index=0):
@@ -821,7 +848,7 @@ def forecast(points, forecast):
 	logger.debug('last_point: %s, date: %s' % (points[-1], date))
 
 	for index in xrange(len(points), len(F)):
-		date = TimeWindow.get_next_date(date, forecast.timeserie.timewindow, forecast.timeserie.period)
+		date = TimeWindow.get_next_date(date, timewindow, forecast.timeserie.period)
 		timestamp = time.mktime(date.timetuple())
 		point = [timestamp, F[index]]
 		result.append(point)

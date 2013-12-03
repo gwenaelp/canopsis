@@ -17,32 +17,31 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-Ext.define('canopsis.lib.form.field.cforecast' , {
+Ext.define('canopsis.lib.form.field.ctimeserie' , {
 	extend: 'Ext.form.FieldContainer',
 	mixins: ['canopsis.lib.form.cfield'],
 
-	alias: 'widget.cforecast',
+	alias: 'widget.ctimeserie',
 
 	layout: 'vbox',
 
 	fieldLabel: undefined,
 
-	Custom: {category: "Custom", demand: 0, beta: 0, trend: 0},
-	NotLinearMidVariable: {category:"Not linear mid variable", demand:0.99, beta:0.12, trend:0.80},
-	LinearNotVariable: {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
-	NotLinearVariable: {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
-	LinearVariable: {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
-
 	value: {
 		enable: false,
-		max_points: 250,
-		duration: {value: 0, unit: 'day'},
-		enddate: undefined,
-		category: this.NotLinearMidVariable,
-		demand: 0.99,
-		seasonality: 0.12,
-		trend: 0.8,
-		threshold: {value: 10, unit: '%'}
+		max_points: 500,
+		period: {value: 1, unit: 'day'},
+		operation: 'MEAN',
+		forecast: {
+			max_points: 250,
+			duration: {value: 0, unit: 'day'},
+			enddate: undefined,
+			category: this.NotLinearMidVariable,
+			demand: 0.99,
+			seasonality: 0.12,
+			trend: 0.8,
+			threshold: {value: 10, unit: '%'}	
+		}
 	},
 
 	initComponent: function() {
@@ -61,73 +60,48 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			minValue: this.max_points_min,
 			labelField: 'Max points'
 		});
-		this.ts_duration = Ext.widget('cperiod', {
+		this.ts_period = Ext.widget('cperiod', {
 			isFormField: false,
-			name: 'duration',			
-			value:this.value.duration,
-			minValue: this.number_min_val,
-			fieldLabel: 'Duration (if no max points)'
-		});
-		this.ts_enddate = Ext.widget('datefield', {
-			name: 'enddate',
-			value: this.value.enddate,
-			fieldLabel: 'End date (if no max points and no duration',
+			name: 'period',			
+			value:this.value.period,
+			fieldLabel: 'Period'
 		});
 
-		var category_store_data [
-			{'name': _(this.NotLinearMidVariable.category), 'value': this.NotLinearMidVariable},
-			{'name': _(this.LinearNotVariable.category), 'value': this.LinearNotVariable},
-			{'name': _(this.LinearVariable.category), 'value': this.LinearVariable},
-			{'name': _(this.LinearVariable.category), 'value': this.LinearVariable},
-			{'name': _(this.Custom.category), 'value': this.Custom},
+		var operation_store_data [
+			{'name': _('First'), 'value': 'FIRST'},
+			{'name': _('Last'), 'value': 'LAST'},
+			{'name': _('Min'), 'value': 'MIN'},
+			{'name': _('Max'), 'value': 'MAX'},
+			{'name': _('Sum'), 'value': 'SUM'},
+			{'name': _('Mean'), 'value': 'MEAN'},
+			{'name': _('Delta'), 'value': 'DELTA'}
 		];
-
-		// algorithm parametes
-		this.ts_category = Ext.widget('combobox', {
+		this.ts_operation = Ext.widget('combobox', {
 			isFormField: false,
 			editable: false,
 			width: 97,
-			name: 'category',
+			name: 'operation',
 			queryMode: 'local',
 			displayField: 'name',
 			valueField: 'value',
-			labelField: 'Category',
+			labelField: 'Operation',
 			store: {
 				xtype: 'store',
 				fields: ['value', 'name'],
-				data: category_store_data
+				data: operation_store_data
 			}
 		});
-		this.ts_demand = Ext.widget('numberfield', {
-			name: 'demand',
-			value: this.value.demand,
-			fieldLabel: 'Demand (alpha)'
+		this.ts_forecast = Ext.widget('cforecast', {
+			name: 'forecast',
+			value: this.value.forecast
 		});
-		this.ts_seasonality = Ext.widget('numberfield', {
-			name: 'seasonality',
-			value: this.value.seasonality,
-			fieldLabel: 'Seasonality (beta)'
-		});
-		this.ts_trend = Ext.widget('numberfield', {
-			name: 'trend',
-			value: this.value.trend,
-			fieldLabel: 'Trend (gamma)'
-		});
-		this.ts_threshold = Ext.widget('numberfield', {
-			name: 'threshold',
-			value: this.value.threshold,
-			fieldLabel: 'Forecast threshold'
-		});
+
 		this.items = [
-			this.ts_enable, 
+			this.ts_enable,
 			this.ts_max_points, 
-			this.ts_duration, 
-			this.ts_enddate,
-			this.ts_category,
-			this.ts_demand,
-			this.ts_seasonality,
-			this.ts_trend,
-			this.ts_threshold,
+			this.ts_period, 			
+			this.ts_operation,
+			this.ts_forecast
 		];
 
 		this.callParent(arguments);
@@ -151,8 +125,9 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	show: function() {
 		this.callParent(arguments);
+
 		for (int i=1; i<this.items.length; i++) {
-			item = this.items[i];
+			var item = this.items[i];
 			item.show();
 			item.setDisabled(false);
 		};
@@ -160,8 +135,9 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	hide: function() {
 		this.callParent(arguments);
+
 		for (int i=1; i<this.items.length; i++) {
-			item = this.items[i];
+			var item = this.items[i];
 			item.hide();
 			item.setDisabled(true);
 		};
@@ -171,17 +147,17 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 		result = {};
 
 		for (int i=0; i<this.items.length; i++) {
-			item = this.items[i];
+			var item = this.items[i];
 			result[item.getName()] = item.getValue();
-		};
+		}
 
 		return result;
 	},
 
 	setValue: function(value) {
-		if(value) {
+		if (value) {
 			for (int i=0; i<this.items.length; i++) {
-				item = this.items[i];
+				var item = this.items[i];
 				item.setValue(value[item.getName()]);
 			}
 		} else {

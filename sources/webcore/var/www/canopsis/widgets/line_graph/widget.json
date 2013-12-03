@@ -168,136 +168,10 @@
 		}, {
 			"title": "Time serie",
 			"advanced": true,
-			"items" : [
+			"items": [
 				{
-					"xtype": "checkbox",
-					"name": "time_serie_enable",
-					"fieldLabel": "Enable",
-					"checked": false
-				}, {
-					"xtype": "cfieldset",
-					"title": "Period",
-					"items": [
-						{
-							"xtype" : "numberfield",
-							"name" : "time_serie_max_points",
-							"fieldLabel": "Max points (if no duration)",
-							"minValue": 2,
-							"value": 500
-						}, {
-							"xtype": "cperiod",
-							"name": "time_serie_period",
-							"fieldLabel": "Duration",
-							"value": {"value": 1, "unit": "day"}
-						}, {
-							"xtype": "checkbox",
-							"name": "time_serie_sliding_time",
-							"fieldLabel": "Sliding time (if interval)",
-							"checked": true
-						}, {
-							"xtype": "combobox",
-							"name": "time_serie_operation",
-							"fieldLabel": "Reduction operation",
-							"queryMode": "local",
-							"displayField": "text",
-							"valueField": "value",
-							"value": "MEAN",
-							"store": {
-								"xtype": "store",
-								"fields": ["value", "text"],
-								"data" : [									
-									{"value": "MAX", "text": "Max"},
-									{"value": "MIN", "text": "Min"},
-									{"value": "LAST", "text": "Last"},
-									{"value": "FIRST", "text": "First"},
-									{"value": "DELTA", "text": "Delta"},
-									{"value": "MEAN", "text": "Mean"},
-									{"value": "SUM", "text": "Sum"}
-								]
-							}
-						}, {
-							"xtype": "checkbox",
-							"name": "time_serie_fill",
-							"fieldLabel": "Fill empty points",
-							"checked": false
-						}
-					]
-				}, {
-					"xtype": "cfieldset",
-					"title": "Consolidation between metrics",
-					"items": [
-						{
-							"xtype": "combobox",
-							"name": "consolidation_method",
-							"fieldLabel": "Consolidation Method",
-							"queryMode": "local",
-							"displayField": "text",
-							"valueField": "value",
-							"value":"",
-							"store": {
-								"xtype": "store",
-								"fields": ["value", "text"],
-								"data" : [
-									{"value": "", "text": "None"},
-									{"value": "max", "text": "Max"},
-									{"value": "min", "text": "Min"},
-									{"value": "sum", "text": "Sum"},
-									{"value": "mean", "text": "Mean"}
-								]
-							}
-						}
-					]
-				}, {
-					"xtype": "cfieldset",
-					"title": "Forecast",
-					"items":[
-						{
-							"xtype": "checkbox",
-							"fieldLabel": "Enable",
-							"name": "forecast_enable",
-							"checked": false
-						}, {
-							"xtype": "numberfield",
-							"fieldLabel": "max points",
-							"name": "forecast_max_points",
-							"value": 500
-						}, {
-							"xtype": "datefield",
-							"fieldLabel": "End date (if no max points)",
-							"name": "forecast_date",
-							"value": 0
-						}, {
-							"xtype": "cperiod",
-							"name": "forecast_duration",
-							"value": {"unit": "day", "value": 1},
-							"fieldLabel": "Forecast Duration (if no max points and no end date)"
-						}, {
-							"xtype": "numberfield",
-							"name": "forecast_alpha",
-							"value": 0.99,
-							"fieldLabel": "Demand"
-						}, {
-							"xtype": "numberfield",
-							"name": "forecast_beta",
-							"value": 0.12,
-							"fieldLabel": "Seasonality"
-						}, {
-							"xtype": "numberfield",
-							"name": "forecast_gamma",
-							"value": 0.80,
-							"fieldLabel": "Trend"
-						}, {
-							"xtype": "numberfield",
-							"name": "critical_threshold",
-							"value": 0,
-							"fieldLabel": "Critical threshold"
-						}, {
-							"xtype": "numberfield",
-							"name": "warning_threshold",
-							"value": 0,
-							"fieldLabel": "Warning threshold"
-						}
-					]
+					"xtype": "ctimeserie",
+					"name": "time_serie",
 				}
 			]
 		}, {					
@@ -483,6 +357,7 @@
 		}, {
 			"title": "customize metrics",
 			"advanced": true,
+<<<<<<< HEAD
 			"items": [
 				{
 					"xtype": "ccustom",
@@ -551,5 +426,78 @@
 			]
 		}
 	]
+=======
+			"items": [{
+						"xtype": "ccustom",
+						"sharedStore":"line_graph",
+						"customForm": [{
+											"xtype" : "combobox",
+											"name" : "curve_type",
+											"fieldLabel": "Curve type",
+											"value":"default",
+											"store": {
+												"xtype": "store",
+												"fields": ["value", "text"],
+												"data" : [
+													{"value": "default", "text": "Default"},
+													{"value": "line", "text": "Line"},
+													{"value": "area", "text": "Area"}
+												]
+											}
+										},{
+											"xtype":"textfield",
+											"fieldLabel":"Custom label",
+											"name":"label",
+											"emptyText":"Type the new label here"
+										},{
+											"xtype" : "ccolorfield",
+											"name" : "curve_color",
+											"fieldLabel": "Curve color",
+											"replaceWhiteColor":true
+										},{
+											"xtype" : "ccolorfield",
+											"name" : "area_color",
+											"fieldLabel": "Area color",
+											"replaceWhiteColor":true
+										},{
+											"xtype":"checkbox",
+											"fieldLabel":"Trend",
+											"name": "trend_curve",
+											"checked":false
+										},{
+											"xtype":"textfield",
+											"fieldLabel":"Unit",
+											"name":"u"
+										},{
+											"xtype": "combobox",
+											"name": "yAxis",
+											"fieldLabel": "Y axis",
+											"queryMode": "local",
+											"displayField": "text",
+											"valueField": "value",
+											"value":"default",
+											"store": {
+												"xtype": "store",
+												"fields": ["value", "text"],
+												"data" : [
+													{"value": "default", "text": "Dynamic"},
+													{"value": 1, "text": "1st axis"},
+													{"value": 2, "text": "2nd axis"},
+													{"value": 3, "text": "3rd axis"},
+													{"value": 4, "text": "4th axis"}
+												]
+											}
+										},{
+											"xtype": "numberfield",
+											"name": "threshold_warn",
+											"fieldLabel": "Custom Warning threshold"
+										},{
+											"xtype": "numberfield",
+											"name": "threshold_crit",
+											"fieldLabel": "Custom Critical threshold"
+										}]
+					}]
+		}]
+>>>>>>> develop
 }]
 
