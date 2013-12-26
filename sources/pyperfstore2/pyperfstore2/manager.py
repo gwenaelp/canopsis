@@ -217,7 +217,7 @@ class manager(object):
 				if tstart == tstop and tstart >= fts and tstart <= lts:
 					bin_ids.append(bin_id)
 					self.logger.debug("   + Append")
-				elif utils.get_overlap([fts, lts], [tstart, tstop]):
+				elif utils.get_overlap([fts, lts], [tstart, tstop]) >= 0:
 					bin_ids.append(bin_id)
 					self.logger.debug("   + Append")
 			
@@ -234,7 +234,7 @@ class manager(object):
 			elif tstart == tstop and tstart >= plain_lts:
 				points += dca['d']
 				self.logger.debug("   + Append")
-			elif utils.get_overlap([plain_fts, plain_lts], [tstart, tstop]):
+			elif utils.get_overlap([plain_fts, plain_lts], [tstart, tstop]) >= 0:
 				points += dca['d']
 				self.logger.debug("   + Append")
 		

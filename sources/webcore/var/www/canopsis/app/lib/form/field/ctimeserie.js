@@ -31,8 +31,11 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 		enable: false,
 		max_points: 500,
 		period: {value: 1, unit: 'day'},
+		sliding_time: true,
 		operation: 'MEAN',
+		fill: false,
 		forecast: {
+			enable: false,
 			max_points: 250,
 			duration: {value: 0, unit: 'day'},
 			enddate: undefined,
@@ -40,7 +43,7 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 			demand: 0.99,
 			seasonality: 0.12,
 			trend: 0.8,
-			threshold: {value: 10, unit: '%'}	
+			threshold: {value: 10, unit: '%'}
 		}
 	},
 
@@ -52,6 +55,27 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 			name: 'enable',
 			checked: this.value.enable,
 			labelField: 'Enable',
+			listeners: {
+				changed: {
+					if (this.ts_enable.getValue()) {
+						for (var index=0; index<this.ts_items.length; index++) {
+							item = this.ts_items[index];
+							if (item !== this.ts_enable) {
+								item.disable();
+								item.hide();
+							}
+						}
+					} else {
+						for (var index=0; index<this.ts_items.length; index++) {
+							item = this.ts_items[index];
+							if (item !== this.ts_enable) {
+								item.enable();
+								item.show();
+							}
+						}
+					}
+				}
+			}
 		});
 		this.ts_max_points = Ext.widget('numberfield', {
 			name: 'max_points',
@@ -62,9 +86,14 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 		});
 		this.ts_period = Ext.widget('cperiod', {
 			isFormField: false,
-			name: 'period',			
+			name: 'period',
 			value:this.value.period,
 			fieldLabel: 'Period'
+		});
+		this.ts_sliding_time = Ext.widget('checkbox', {
+			name: 'sliding_time',
+			value:this.value.sliding_time,
+			fieldLabel: 'Sliding time'
 		});
 
 		var operation_store_data [
@@ -91,6 +120,11 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 				data: operation_store_data
 			}
 		});
+		this.ts_fill = Ext.widget('checkbox', {
+			name: 'fill',
+			value:this.value.fill,
+			fieldLabel: 'Do not cut curve in empty intervals'
+		});
 		this.ts_forecast = Ext.widget('cforecast', {
 			name: 'forecast',
 			value: this.value.forecast
@@ -98,9 +132,11 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 
 		this.items = [
 			this.ts_enable,
-			this.ts_max_points, 
-			this.ts_period, 			
+			this.ts_max_points,
+			this.ts_period,
+			this.ts_sliding_time,
 			this.ts_operation,
+			this.ts_fill,
 			this.ts_forecast
 		];
 

@@ -34,6 +34,11 @@ from ctools import internal_metrics
 import pyperfstore2
 import pyperfstore2.utils
 
+from timeserie import TimeSerie
+from timewindow import TimeWindow
+
+import copy
+
 manager = None
 
 logger = logging.getLogger("perfstore")
@@ -51,36 +56,36 @@ def unload():
 group_managing_access = ['group.CPS_perfdata_admin']
 #########################################################################
 
-TIMESERIE = 'timeserie'
-EXCLUSION_INTERVALS = 'exclusion_intervals'
+TIMEWINDOW = 'time_window'
+TIMESERIE = 'time_serie'
 TIMEZONE = 'timezone'
-CRUSHING = 'crushing'
+CRUSHING_OPERATION = 'crushing_operation'
 
 
 @post('/perfstore/values')
-@post('/perfstore/values/:start/:stop')
-def perfstore_nodes_get_values(start=None, stop=None):
+def perfstore_nodes_get_values():
 
     metas = request.params.get('nodes', default=None)
+    timewindow = request.params.get(TIMEWINDOW, default=None)
     timeserie = request.params.get(TIMESERIE, default=None)
-    timezone = request.params.get(TIMEZONE, default=0.)
-    exclusion_intervals = request.params.get(EXCLUSION_INTERVALS, default=[])
 
-    timewindow = pyperfstore2.utils.TimeWindow(
-        start=start,
-        stop=stop,
-        exclusion_intervals=exclusion_intervals)
+    if timewindow:
+        logger.debug('timewindow: {0}'.format(timewindow))
+        timewindow = json.loads(timewindow)
+        timewindow = TimeWindow(**timewindow)
+    else:
+        timewindow = TimeWindow()
 
     if timeserie:
-        logger.debug('timeserie: %s' % timeserie)
+        logger.debug('timeserie: {0}'.format(timeserie))
         timeserie = json.loads(timeserie)
-        timeserie = pyperfstore2.utils.TimeSerie(**timeserie)
+        timeserie = TimeSerie(**timeserie)
+    else:
+        timeserie = TimeSerie()
 
-    crushing_method = request.params.get(
-        CRUSHING,
+    crushing_operation = request.params.get(
+        CRUSHING_OPERATION,
         default=None)
-
-    timezone = int(request.params.get('timezone', default=0))
 
     output = []
 
@@ -94,48 +99,44 @@ def perfstore_nodes_get_values(start=None, stop=None):
     logger.debug(" + metas: %s" % metas)
     logger.debug("timewindow: %s" % timewindow)
     logger.debug("timeserie: %s" % timeserie)
-    logger.debug("consolidation_method: %s" % crushing_method)
-    logger.debug("timezone: %s" % timezone)
+    logger.debug("crushing_operation: %s" % crushing_operation)
 
     output = []
 
     for meta in metas:
 
         _id = meta.get('id', None)
-        timewindow.start = meta.get('from', start)
-        timewindow.stop = meta.get('to', stop)
 
         if _id:
+            meta_timewindow = meta.get(TIMEWINDOW, copy.deepcopy(timewindow))
+            meta_timeserie = meta.get(TIMESERIE, copy.deepcopy(timeserie))
+
             values = perfstore_get_values(
                 _id=meta['id'],
-                timewindow=timewindow,
-                timeserie=timeserie,
-                timezone=timezone)
+                timewindow=meta_timewindow,
+                timeserie=meta_timeserie)
 
             output += values
 
-    series = []
+    if crushing_operation:
 
-    if crushing_method:
+        crushing_timeserie = copy.deepcopy(timeserie)
+        crushing_timeserie.operation = crushing_operation
 
-        for serie in output:
-            series.append(serie["values"])
-            output = [{
-                'node': output[0]['node'],
-                'metric': crushing_method,
-                'bunit': None,
-                'type': 'GAUGE',
-                'values': pyperfstore2.utils.crush_series(
-                    series,
-                    crushing_method,
-                    60)
-                }]
+        values = crushing_timeserie.crush_series(output, timewindow)
 
-            if timeserie and timeserie.forecast:
-                forecast = pyperfstore2.utils.forecast(
-                    points=output.values,
-                    forecast=timeserie.forecast)
-                output.append(forecast)
+        output = [{
+            'node': output[0]['node'],
+            'metric': crushing_operation,
+            'bunit': None,
+            'type': 'GAUGE',
+            'values': values[0]
+            }]
+
+        if values[1]:  # if forecast
+            forecast_serie = output[0].copy()
+            forecast_serie['values'] = values[1]
+            forecast_serie['metric'] += '_forecast'
 
     output = {'total': len(output), 'success': True, 'data': output}
 
@@ -543,17 +544,15 @@ def perfstore_get_values(
 ):
 
     logger.debug("Perfstore get points:")
-    logger.debug(" + meta _id:    %s" % _id)
-    logger.debug(" + timewindow:    %s" % timewindow)
-    logger.debug(" + timeserie:    %s" % timeserie)
-    logger.debug(" + timewindow:    %s" % timewindow)
-    logger.debug(" + timezone:    %s" % timezone)
+    logger.debug(" + meta _id:    {0}".format(_id))
+    logger.debug(" + timewindow:    {0}".format(timewindow))
+    logger.debug(" + timeserie:    {0}".format(timeserie))
 
     output = []
     meta = None
 
     if not _id:
-        logger.error("Invalid _id '%s'" % _id)
+        logger.error("Invalid _id '{0}'".format(_id))
         return output
 
     try:
@@ -571,7 +570,7 @@ def perfstore_get_values(
             if point:
                 points = [point]
 
-            logger.debug('Point: %s' % points)
+            logger.debug('Point: {0}'.format(points))
 
         else:
             (meta, points) = manager.get_points(
@@ -590,41 +589,34 @@ def perfstore_get_values(
 
             if len(points) and timeserie:
                 logger.debug('time serie')
-                points = pyperfstore2.utils.timeserie(
+                points = timeserie.calculate_points(
                     points=points,
-                    timewindow=timewindow,
-                    timeserie=timeserie,
-                    timezone=timezone)
+                    timewindow=timewindow)
 
-                logger.debug('time serie %s' % len(points))
-
-                if timeserie.forecast:
-                    F = pyperfstore2.utils.forecast(
-                        points=points,
-                        forecast=timeserie.forecast)
-
-                    logger.debug('forecast %s' % len(F))
+                logger.debug('time serie {0}, forecast {1}'.format(
+                    len(points[0]), len(points[1])))
 
     except Exception as err:
-        logger.error("Error when getting points: %s" % err)
+        logger.error("Error when getting points: {0}".format(err))
 
     if points and meta:
         entry = {
             'node': _id,
             'metric': meta['me'],
-            'values': points,
+            'values': points[0],
             'bunit': meta['unit'],
             'min': meta['min'],
             'max': meta['max'],
             'thld_warn': meta['thd_warn'],
             'thld_crit': meta['thd_crit'],
             'type': meta['type']}
+
         output.append(entry)
 
-    if len(points) and timeserie.forecast:
-        entry = entry.copy()
-        entry['values'] = F
-        entry['metric'] += '_forecast'
-        output.append(entry)
+        if len(points[1]):
+            entry = entry.copy()
+            entry['values'] = points[1]
+            entry['metric'] += '_forecast'
+            output.append(entry)
 
     return output

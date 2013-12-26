@@ -134,8 +134,6 @@ Ext.define('widgets.line_graph.line_graph', {
 	same_node: true,
 	displayLastValue: false,
 
-	consolidation_method: undefined,
-
 	timeNav: false,
 	timeNav_window: 604800,
 	onDoRefresh: false,
@@ -149,33 +147,28 @@ Ext.define('widgets.line_graph.line_graph', {
 	time_serie: {
 		enable: false,
 		max_points: 500,
-		period: {
-			value: 1,
-			unit: 'day'
-		},
+		period: {value: 1, unit: 'day'},
 		sliding_time: true,
 		operation: 'MEAN',
 		fill: false,
 		forecast: {
 			enable: false,
 			max_points: 250,
-			date: undefined,
 			duration: undefined,
-			type: 'NotLinearMidVariable',
-			alpha: 0.99,
-			beta: 0.12,
-			gamma: 0.80,
+			enddate: undefined,
+			category: 'BestEffort',
+			demand: 0.99,
+			seasonality: 0.12,
+			trend: 0.80,
+			// not linear and mid-variable: 0.99, 0.12, 0.80, 5.30, 0.71
+			// linear: 0.99, 0.01, 0.97, 262.5, 1.12
+			// not linear and variable: alpha: 0.60, gamma: 0.01, l0: 343.5
+			// linear and variable: 0.68, 0.01, 0.17, 84.5, 2.87
 			threshold: {value: 10, unit: '%'}
 		}
 	},
 
-	// not linear and mid-variable: 0.99, 0.12, 0.80, 5.30, 0.71
-	// linear: 0.99, 0.01, 0.97, 262.5, 1.12
-	// not linear and variable: alpha: 0.60, gamma: 0.01, l0: 343.5
-	// linear and variable: 0.68, 0.01, 0.17, 84.5, 2.87
-
-	critical_threshold: 0,
-	warning_threshold: 0,
+	crushing_method: undefined,
 
 	displayComponentsAndResourcesInLegend: false,
 
@@ -603,12 +596,12 @@ Ext.define('widgets.line_graph.line_graph', {
 		if(val) {
 			var dval = new Date(parseInt(val) * 1000);
 
-			if (this.time_serie && this.time_serie_period.value) {
-				switch(this.time_serie_period.unit) {
-					case 'second': 
-					case 'minute': 
+			if (this.time_serie.enable && this.time_serie.period.value) {
+				switch(this.time_serie.period.unit) {
+					case 'second':
+					case 'minute':
 					case 'hour': return Ext.Date.format(dval, 'Y-m-d h:i:s');
-					case 'day': 
+					case 'day':
 					case 'week': return Ext.Date.format(dval, 'Y-m-d');
 					case 'month': return Ext.Date.format(dval, 'Y-m');
 					case 'year': return Ext.Date.format(dval, 'Y');
@@ -822,7 +815,7 @@ Ext.define('widgets.line_graph.line_graph', {
 
 	shift: function(tolerance) {
 		if(tolerance === undefined) {
-			if(this.aggregate_interval) {
+			if(this.time_serie.enable) {
 				// tolerance = this.aggregate_interval * 1000;
 			}
 			else {
@@ -1059,7 +1052,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		}
 
 		//type specifique parsing
-		if(type === 'COUNTER' && !this.aggregate_interval && !this.reportMode && serie.data.length) {
+		if(type === 'COUNTER' && !this.time_serie.enable && !this.reportMode && serie.data.length) {
 			var last_point = serie.data[serie.data.length - 1];
 			var last_value = last_point.y;
 			var new_values = [];
@@ -1254,7 +1247,7 @@ Ext.define('widgets.line_graph.line_graph', {
 			var last_timestamp = values[values.length - 1][0];
 
 			// Timestamp of new and old point are equal, remove last point for update
-			if(this.time_serie && last_timestamp === this.series[serie_id]['last_timestamp'] && serie.data.length) {
+			if(this.time_serie.enable && last_timestamp === this.series[serie_id]['last_timestamp'] && serie.data.length) {
 				var point = serie.data[serie.data.length - 1];
 				log.debug('   + Remove last point', this.logAuthor);
 				point.remove(false, false);
@@ -1588,7 +1581,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		}
  	},
 
- 	processPostParam: function(post_param) { // patch in waiting that shift method is reused
+ 	processPostParam: function(node, post_param) { // patch in waiting that shift method is reused
  		if(post_param['from'] && post_param['to']) {
  			if(this.timeNav) {
 				var time_limit = (post_param['to'] - this.timeNav_window);
@@ -1602,36 +1595,7 @@ Ext.define('widgets.line_graph.line_graph', {
  				post_param['from'] = (post_param['to'] - this.time_window);
  			}
  		}
+
  	},
 
- 	processPostParams: function(post_params) {
- 		if (this.time_serie_enable) {
-	 		var time_serie = {
-	 			max_points: this.time_serie_max_points,
-	 			period: this.time_serie_period,
-	 			sliding_time: this.time_serie_sliding_time,
-	 			operation: this.time_serie_operation,
-	 			fill: this.time_serie_fill
-	 		};
-	 		post_params['timeserie'] = Ext.JSON.encode(time_serie);
-
-	 		if (this.forecast_enable) {
-		 		var forecast = {
-		 			max_points: this.forecast_max_points,
-		 			date: this.forecast_date,
-		 			duration: this.forecast_duration,
-		 			alpha: this.forecast_alpha,
-		 			beta: this.forecast_beta,
-		 			gamma: this.forecast_gamma
-		 		};
-		 		post_params['forecast'] = Ext.JSON.encode(forecast);
-	 		}
-
-	 		var thresholds = {
-	 			warning: this.warning_threshold,
-	 			critical: this.critical_threshold
-	 		};
-	 		post_params['thresholds'] = Ext.JSON.encode(thresholds);
- 		}
- 	}
 });

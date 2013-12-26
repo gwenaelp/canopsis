@@ -52,10 +52,12 @@ Ext.define('widgets.diagram.diagram', {
 	gradientColor: false,
 
 	interval: global.commonTs.hours,
-	aggregate_method: 'LAST',
-	aggregate_interval: 0,
-	aggregate_max_points: 1,
-	aggregate_round_time: true,
+	time_serie: {
+		enable: true,
+		operation: 'LAST',
+		max_points: 1,
+		sliding_time: true
+	},
 
 	nb_node: 0,
 	hide_other_column: false,
@@ -333,10 +335,6 @@ Ext.define('widgets.diagram.diagram', {
 				shortMonths: [_('Jan'), _('Feb'), _('Mar'), _('Apr'), _('May'), _('Jun'), _('Jul'), _('Aug'), _('Sept'), _('Oct'), _('Nov'), _('Dec')]
 			}
 		});
-	},
-
-	processPostParams: function(post_params) {
-		post_params['aggregate_max_points'] = 1;
 	},
 
 	doRefresh: function(from, to) {
@@ -703,5 +701,6 @@ Ext.define('widgets.diagram.diagram', {
 		}
 
 		return this.value;
-	}
+	},
+
 });

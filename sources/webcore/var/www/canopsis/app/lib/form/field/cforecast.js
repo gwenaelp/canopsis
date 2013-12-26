@@ -32,16 +32,19 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 	LinearNotVariable: {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
 	NotLinearVariable: {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
 	LinearVariable: {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
+	BestEffort: {category: "BestEffort", demand: 0, beta: 0, trend: 0},
+
+	defaultCategory: NotLinearMidVariable,
 
 	value: {
 		enable: false,
 		max_points: 250,
 		duration: {value: 0, unit: 'day'},
 		enddate: undefined,
-		category: this.NotLinearMidVariable,
-		demand: 0.99,
-		seasonality: 0.12,
-		trend: 0.8,
+		category: this.Custom,
+		demand: this.defaultCategory.demand,
+		seasonality: this.defaultCategory.seasonality,
+		trend: this.defaultCategory.trend,
 		threshold: {value: 10, unit: '%'}
 	},
 
@@ -53,6 +56,27 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			name: 'enable',
 			checked: this.value.enable,
 			labelField: 'Enable',
+			listeners: {
+				changed: {
+					if (this.ts_enable.getValue()) {
+						for (var index=0; index<this.ts_items.length; index++) {
+							item = this.ts_items[index];
+							if (item !== this.ts_enable) {
+								item.disable();
+								item.hide();
+							}
+						}
+					} else {
+						for (var index=0; index<this.ts_items.length; index++) {
+							item = this.ts_items[index];
+							if (item !== this.ts_enable) {
+								item.enable();
+								item.show();
+							}
+						}
+					}
+				}
+			}
 		});
 		this.ts_max_points = Ext.widget('numberfield', {
 			name: 'max_points',
@@ -63,7 +87,7 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 		});
 		this.ts_duration = Ext.widget('cperiod', {
 			isFormField: false,
-			name: 'duration',			
+			name: 'duration',
 			value:this.value.duration,
 			minValue: this.number_min_val,
 			fieldLabel: 'Duration (if no max points)'
@@ -113,15 +137,15 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			value: this.value.trend,
 			fieldLabel: 'Trend (gamma)'
 		});
-		this.ts_threshold = Ext.widget('numberfield', {
+		this.ts_threshold = Ext.widget('cthreshold', {
 			name: 'threshold',
 			value: this.value.threshold,
 			fieldLabel: 'Forecast threshold'
 		});
 		this.items = [
-			this.ts_enable, 
-			this.ts_max_points, 
-			this.ts_duration, 
+			this.ts_enable,
+			this.ts_max_points,
+			this.ts_duration,
 			this.ts_enddate,
 			this.ts_category,
 			this.ts_demand,

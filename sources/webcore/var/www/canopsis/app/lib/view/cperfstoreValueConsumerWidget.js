@@ -30,10 +30,12 @@ Ext.define('canopsis.lib.view.cperfstoreValueConsumerWidget', {
 		if(this.nodesByID && Ext.Object.getSize(this.nodesByID) != 0) {
 			var url = this.getUrl(from, to);
 
+			var params = this.getParams(from, to);
+
 			Ext.Ajax.request({
 				url: url,
 				scope: this,
-				params: this.getParams(from, to),
+				params: params,
 				method: 'POST',
 
 				success: function(response) {
@@ -130,9 +132,14 @@ Ext.define('canopsis.lib.view.cperfstoreValueConsumerWidget', {
 				post_param['to'] = parseInt(to / 1000);
 			}
 
-			this.processPostParam(post_param);
+			if (serie.time_serie) {
+				post_param['time_serie'] = Ext.JSON.encode(serie.time_serie);
+			}
+
+			this.processPostParam(node, post_param);
 
 			post_params.push(post_param);
+
 		}, this);
 
 		post_params = {
@@ -140,24 +147,12 @@ Ext.define('canopsis.lib.view.cperfstoreValueConsumerWidget', {
 			'timezone': new Date().getTimezoneOffset() * 60
 		};
 
-		if(this.aggregate_method) {
-			post_params['aggregate_method'] = this.aggregate_method;
+		if (this.time_serie) {
+			post_params['time_serie'] = Ext.JSON.encode(this.time_serie);
 		}
 
-		if(this.aggregate_interval) {
-			post_params['aggregate_interval'] = this.aggregate_interval;
-		}
-
-		if(this.aggregate_max_points) {
-			post_params['aggregate_max_points'] = this.aggregate_max_points;
-		}
-
-		if(this.aggregate_round_time) {
-			post_params['aggregate_round_time'] = this.aggregate_round_time;
-		}
-
-		if(this.consolidation_method) {
-			post_params['consolidation_method'] = this.consolidation_method;
+		if(this.crushing_method) {
+			post_params['crushing_method'] = this.consolidation_method;
 		}
 
 		this.processPostParams(post_params);
@@ -165,7 +160,8 @@ Ext.define('canopsis.lib.view.cperfstoreValueConsumerWidget', {
 		return post_params;
 	},
 
-	processPostParam: function(post_param) {
+	processPostParam: function(node, post_param) {
+		void(node);
 		void(post_param);
 
 		return;

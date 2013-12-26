@@ -105,7 +105,7 @@ Ext.define('canopsis.lib.form.field.cthreshold' , {
 		this.ts_unit.setDisabled(true);
 	},
 
-	getValue: function() {		
+	getValue: function() {
 		result = {value: this.ts_value.getValue(), unit: this.ts_unit.getValue()};
 
 		return result;
@@ -114,7 +114,7 @@ Ext.define('canopsis.lib.form.field.cthreshold' , {
 	setValue: function(value) {
 		if(value) {
 			this.ts_value.setValue(value.value);
-			this.ts_unit.setValue(value.unit);			
+			this.ts_unit.setValue(value.unit);
 		}
 		else {
 			this.setValue(this.value);
