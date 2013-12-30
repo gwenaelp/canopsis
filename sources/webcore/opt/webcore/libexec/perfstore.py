@@ -34,8 +34,8 @@ from ctools import internal_metrics
 import pyperfstore2
 import pyperfstore2.utils
 
-from timeserie import TimeSerie
-from timewindow import TimeWindow
+from pyperfstore2.timeserie import TimeSerie
+from pyperfstore2.timewindow import TimeWindow
 
 import copy
 

@@ -23,11 +23,6 @@
 							"checked": false,
 							"name": "exporting_enabled"
 						}, {
-							"xtype": "cduration",
-							"name": "time_window_offset",
-							"value": 0,
-							"fieldLabel": "Time window offset"
-						}, {
 							"xtype": "combobox",
 							"name": "SeriesType",
 							"fieldLabel": "Series Type",
@@ -170,8 +165,15 @@
 			"advanced": true,
 			"items": [
 				{
-					"xtype": "ctimeserie",
-					"name": "time_serie",
+					"xtype": "cfieldset",
+					"title": "Title",
+					"items": [
+						{
+							"xtype": "cforecast",
+							"name": "threshold",
+							"fieldLabel": "fuck"
+						}
+					]
 				}
 			]
 		}, {

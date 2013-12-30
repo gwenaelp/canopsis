@@ -2,8 +2,9 @@ import logging
 logger = logging.getLogger('utils')
 logger.setLevel(logging.DEBUG)
 
-import Forecast
-from timewindow import Period
+from pyperfstore2.forecast import Forecast
+from pyperfstore2.timewindow import Period
+
 from datetime import datetime
 import calendar
 

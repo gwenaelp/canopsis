@@ -18,7 +18,7 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-Ext.define('canopsis.lib.form.field.cthreshold' , {
+Ext.define('canopsis.lib.form.field.cthreshold', {
 	extend: 'Ext.form.FieldContainer',
 	mixins: ['canopsis.lib.form.cfield'],
 
@@ -30,7 +30,7 @@ Ext.define('canopsis.lib.form.field.cthreshold' , {
 	value_min_val: 0,
 	value: {value: 10, unit: '%'},
 
-	fieldLabel: undefined,
+	fieldLabel: "threshold",
 
 	initComponent: function() {
 		this.logAuthor = '[' + this.id + ']';
@@ -48,7 +48,7 @@ Ext.define('canopsis.lib.form.field.cthreshold' , {
 		var store_data = [
 			{'name': _('%'), 'value': '%'},
 			{'name': _('None'), 'value': null},
-			{'name': _('KILO'), 'value': 'k'},
+			{'name': _('KILO'), 'value': 'kilo'},
 			{'name': _('MEGA'), 'value': 'mega'},
 			{'name': _('GIGA'), 'value': 'giga'},
 			{'name': _('TERA'), 'value': 'tera'}

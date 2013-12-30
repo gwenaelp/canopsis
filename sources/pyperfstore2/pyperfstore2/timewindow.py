@@ -63,6 +63,7 @@ class Period(object):
         Calculate roudtime relative to an UTC date, a period time/type
         and a timezone.
         """
+
         result = utcdate
 
         dt = timedelta(seconds=timezone)
@@ -164,6 +165,10 @@ class TimeWindow(object):
 
     @staticmethod
     def get_datetime(timestamp, timezone=0):
+        """
+        Get the date time corresponding to both input timestamp and timezone.
+        """
+
         dt = timedelta(seconds=timezone)
         result = datetime.utcfromtimestamp(timestamp) - dt
         return result

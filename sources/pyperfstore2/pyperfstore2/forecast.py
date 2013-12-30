@@ -6,8 +6,7 @@ import time
 
 from datetime import datetime
 
-from timeserie import TimeSerie
-from threshold import Threshold
+from pyperfstore2.threshold import Threshold
 
 
 class Forecast(object):
@@ -23,7 +22,7 @@ class Forecast(object):
     DEFAULT_BETA = 0.12
     DEFAULT_GAMMA = 0.80
 
-    MAX_POINTS = TimeSerie.MAX_POINTS / 2
+    MAX_POINTS = 250
 
     NOT_LINEAR_MID_VARIABLE = 'NotLinearMidVariable'
     LINEAR_NOT_VARIABLE = 'LinearNotVariable'

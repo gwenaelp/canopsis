@@ -17,6 +17,14 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+var Custom = {category: "Custom", demand: 0, beta: 0, trend: 0},
+	NotLinearMidVariable = {category:"Not linear mid variable", demand:0.99, beta:0.12, trend:0.80},
+	LinearNotVariable = {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
+	NotLinearVariable = {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
+	LinearVariable = {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
+	BestEffort = {category: "BestEffort", demand: 0, beta: 0, trend: 0},
+	defaultCategory = NotLinearMidVariable;
+
 Ext.define('canopsis.lib.form.field.cforecast' , {
 	extend: 'Ext.form.FieldContainer',
 	mixins: ['canopsis.lib.form.cfield'],
@@ -27,24 +35,15 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	fieldLabel: undefined,
 
-	Custom: {category: "Custom", demand: 0, beta: 0, trend: 0},
-	NotLinearMidVariable: {category:"Not linear mid variable", demand:0.99, beta:0.12, trend:0.80},
-	LinearNotVariable: {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
-	NotLinearVariable: {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
-	LinearVariable: {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
-	BestEffort: {category: "BestEffort", demand: 0, beta: 0, trend: 0},
-
-	defaultCategory: NotLinearMidVariable,
-
 	value: {
 		enable: false,
 		max_points: 250,
 		duration: {value: 0, unit: 'day'},
 		enddate: undefined,
-		category: this.Custom,
-		demand: this.defaultCategory.demand,
-		seasonality: this.defaultCategory.seasonality,
-		trend: this.defaultCategory.trend,
+		category: Custom,
+		demand: defaultCategory.demand,
+		seasonality: defaultCategory.seasonality,
+		trend: defaultCategory.trend,
 		threshold: {value: 10, unit: '%'}
 	},
 
@@ -57,18 +56,18 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			checked: this.value.enable,
 			labelField: 'Enable',
 			listeners: {
-				changed: {
+				changed: function() {
 					if (this.ts_enable.getValue()) {
-						for (var index=0; index<this.ts_items.length; index++) {
-							item = this.ts_items[index];
+						for (var index=0; index<this.items.items.length; index++) {
+							item = this.items.items[index];
 							if (item !== this.ts_enable) {
 								item.disable();
 								item.hide();
 							}
 						}
 					} else {
-						for (var index=0; index<this.ts_items.length; index++) {
-							item = this.ts_items[index];
+						for (var index=0; index<this.items.items.length; index++) {
+							item = this.items.items[index];
 							if (item !== this.ts_enable) {
 								item.enable();
 								item.show();
@@ -98,12 +97,12 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			fieldLabel: 'End date (if no max points and no duration',
 		});
 
-		var category_store_data [
-			{'name': _(this.NotLinearMidVariable.category), 'value': this.NotLinearMidVariable},
-			{'name': _(this.LinearNotVariable.category), 'value': this.LinearNotVariable},
-			{'name': _(this.LinearVariable.category), 'value': this.LinearVariable},
-			{'name': _(this.LinearVariable.category), 'value': this.LinearVariable},
-			{'name': _(this.Custom.category), 'value': this.Custom},
+		var category_store_data = [
+			{'name': _(NotLinearMidVariable.category), 'value': NotLinearMidVariable},
+			{'name': _(LinearNotVariable.category), 'value': LinearNotVariable},
+			{'name': _(LinearVariable.category), 'value': LinearVariable},
+			{'name': _(LinearVariable.category), 'value': LinearVariable},
+			{'name': _(Custom.category), 'value': Custom},
 		];
 
 		// algorithm parametes
@@ -153,7 +152,6 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			this.ts_trend,
 			this.ts_threshold,
 		];
-
 		this.callParent(arguments);
 
 		this.setValue(this.value);
@@ -167,16 +165,16 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 		var disabled = value[0].raw.value;
 
-		for (var i=0; i<this.items.length; i++) {
-			var item = this.items[i];
+		for (var i=0; i<this.items.items.length; i++) {
+			var item = this.items.items[i];
 			item.setDisabled(disabled);
 		}
 	},
 
 	show: function() {
 		this.callParent(arguments);
-		for (int i=1; i<this.items.length; i++) {
-			item = this.items[i];
+		for (var i=1; i<this.items.items.length; i++) {
+			item = this.items.items[i];
 			item.show();
 			item.setDisabled(false);
 		};
@@ -184,8 +182,8 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	hide: function() {
 		this.callParent(arguments);
-		for (int i=1; i<this.items.length; i++) {
-			item = this.items[i];
+		for (var i=1; i<this.items.items.length; i++) {
+			item = this.items.items[i];
 			item.hide();
 			item.setDisabled(true);
 		};
@@ -194,8 +192,8 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 	getValue: function() {
 		result = {};
 
-		for (int i=0; i<this.items.length; i++) {
-			item = this.items[i];
+		for (var i=0; i<this.items.items.length; i++) {
+			var item = this.items.items[i];
 			result[item.getName()] = item.getValue();
 		};
 
@@ -204,8 +202,8 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 	setValue: function(value) {
 		if(value) {
-			for (int i=0; i<this.items.length; i++) {
-				item = this.items[i];
+			for (var i=0; i<this.items.items.length; i++) {
+				var item = this.items.items[i];
 				item.setValue(value[item.getName()]);
 			}
 		} else {
