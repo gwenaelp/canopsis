@@ -39,7 +39,6 @@ Ext.define('canopsis.lib.form.field.cthreshold', {
 		this.ts_value = Ext.widget('numberfield', {
 			isFormField: false,
 			name: 'value',
-			width: 50,
 			value: this.value.value,
 			minValue: this.value_min_val,
 			step: this.value_step
@@ -57,7 +56,6 @@ Ext.define('canopsis.lib.form.field.cthreshold', {
 		this.ts_unit = Ext.widget('combobox', {
 			isFormField: false,
 			editable: false,
-			width: 97,
 			name: 'unit',
 			queryMode: 'local',
 			displayField: 'name',

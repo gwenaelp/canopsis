@@ -17,12 +17,12 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-var Custom = {category: "Custom", demand: 0, beta: 0, trend: 0},
-	NotLinearMidVariable = {category:"Not linear mid variable", demand:0.99, beta:0.12, trend:0.80},
+var Custom = {category: "Custom", demand: 0, seasonality: 0, trend: 0},
+	NotLinearMidVariable = {category:"Not linear mid variable", demand:0.99, seasonality:0.12, trend:0.80},
 	LinearNotVariable = {category:"Linear not variable", demand:0.99, seasonality:0.01, trend:0.97},
 	NotLinearVariable = {category:"Not linear variable", demand:0.60, seasonality:1, trend:0.01},
 	LinearVariable = {category:"Linear variable", demand:0.68, seasonality:0.01, trend:0.17},
-	BestEffort = {category: "BestEffort", demand: 0, beta: 0, trend: 0},
+	BestEffort = {category: "BestEffort", demand: 0, seasonality: 0, trend: 0},
 	defaultCategory = NotLinearMidVariable;
 
 Ext.define('canopsis.lib.form.field.cforecast' , {
@@ -53,22 +53,25 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 
 		this.ts_enable = Ext.widget('checkbox', {
 			name: 'enable',
-			checked: this.value.enable,
-			labelField: 'Enable',
+			fieldLabel: 'Enable',
+			parent: this,
 			listeners: {
-				changed: function() {
-					if (this.ts_enable.getValue()) {
-						for (var index=0; index<this.items.items.length; index++) {
-							item = this.items.items[index];
-							if (item !== this.ts_enable) {
+				change: function(field, oldvalue, newvalue, eOpts) {
+					void(field);
+					void(oldvalue);
+					void(eOpts);
+					if (newvalue) {
+						for (var index=0; index<this.parent.items.length; index++) {
+							item = this.parent.items.items[index];
+							if (item !== this) {
 								item.disable();
 								item.hide();
 							}
 						}
 					} else {
-						for (var index=0; index<this.items.items.length; index++) {
-							item = this.items.items[index];
-							if (item !== this.ts_enable) {
+						for (var index=0; index<this.parent.items.length; index++) {
+							item = this.parent.items.items[index];
+							if (item !== this) {
 								item.enable();
 								item.show();
 							}
@@ -77,24 +80,28 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 				}
 			}
 		});
+
 		this.ts_max_points = Ext.widget('numberfield', {
 			name: 'max_points',
-			width: 50,
+			//width: 50,
 			value: this.value.max_points,
 			minValue: this.max_points_min,
-			labelField: 'Max points'
+			fieldLabel: 'Max points',
+			hidden: true
 		});
 		this.ts_duration = Ext.widget('cperiod', {
 			isFormField: false,
 			name: 'duration',
 			value:this.value.duration,
 			minValue: this.number_min_val,
-			fieldLabel: 'Duration (if no max points)'
+			fieldLabel: 'Duration (if no max points)',
+			hidden: true
 		});
 		this.ts_enddate = Ext.widget('datefield', {
 			name: 'enddate',
 			value: this.value.enddate,
 			fieldLabel: 'End date (if no max points and no duration',
+			hidden: true
 		});
 
 		var category_store_data = [
@@ -109,37 +116,55 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 		this.ts_category = Ext.widget('combobox', {
 			isFormField: false,
 			editable: false,
-			width: 97,
 			name: 'category',
 			queryMode: 'local',
 			displayField: 'name',
 			valueField: 'value',
-			labelField: 'Category',
+			fieldLabel: 'Category',
 			store: {
 				xtype: 'store',
 				fields: ['value', 'name'],
 				data: category_store_data
+			},
+			hidden: true,
+			parent: this,
+			listeners: {
+				change: function(field, oldvalue, newvalue, eOpts) {
+					if (newvalue === Custom) {
+						this.parent.ts_demand.hide();
+						this.parent.ts_seasonality.hide();
+						this.parent.ts_trend.hide();
+					} else {
+						this.parent.ts_demand.show();
+						this.parent.ts_seasonality.show();
+						this.parent.ts_trend.show();
+					}
+				}
 			}
 		});
 		this.ts_demand = Ext.widget('numberfield', {
 			name: 'demand',
 			value: this.value.demand,
-			fieldLabel: 'Demand (alpha)'
+			fieldLabel: 'Demand (alpha)',
+			hidden: true
 		});
 		this.ts_seasonality = Ext.widget('numberfield', {
 			name: 'seasonality',
 			value: this.value.seasonality,
-			fieldLabel: 'Seasonality (beta)'
+			fieldLabel: 'Seasonality (beta)',
+			hidden: true
 		});
 		this.ts_trend = Ext.widget('numberfield', {
 			name: 'trend',
 			value: this.value.trend,
-			fieldLabel: 'Trend (gamma)'
+			fieldLabel: 'Trend (gamma)',
+			hidden: true
 		});
 		this.ts_threshold = Ext.widget('cthreshold', {
 			name: 'threshold',
 			value: this.value.threshold,
-			fieldLabel: 'Forecast threshold'
+			fieldLabel: 'Forecast threshold',
+			hidden: true
 		});
 		this.items = [
 			this.ts_enable,
@@ -153,9 +178,7 @@ Ext.define('canopsis.lib.form.field.cforecast' , {
 			this.ts_threshold,
 		];
 		this.callParent(arguments);
-
 		this.setValue(this.value);
-
 	},
 
 	checkDisable: function(combo, value) {

@@ -39,7 +39,7 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 			max_points: 250,
 			duration: {value: 0, unit: 'day'},
 			enddate: undefined,
-			category: this.NotLinearMidVariable,
+			category: NotLinearMidVariable,
 			demand: 0.99,
 			seasonality: 0.12,
 			trend: 0.8,
@@ -54,21 +54,26 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 		this.ts_enable = Ext.widget('checkbox', {
 			name: 'enable',
 			checked: this.value.enable,
-			labelField: 'Enable',
+			fieldLabel: 'Enable',
+			parent: this,
 			listeners: {
-				changed: {
-					if (this.ts_enable.getValue()) {
-						for (var index=0; index<this.ts_items.length; index++) {
-							item = this.ts_items[index];
-							if (item !== this.ts_enable) {
+				change: function(field, oldvalue, newvalue, eOpts) {
+					void(field);
+					void(oldvalue);
+					void(eOpts);
+
+					if (newvalue) {
+						for (var index=0; index<this.parent.items.items.length; index++) {
+							item = this.parent.items.items[index];
+							if (item !== this) {
 								item.disable();
 								item.hide();
 							}
 						}
 					} else {
-						for (var index=0; index<this.ts_items.length; index++) {
-							item = this.ts_items[index];
-							if (item !== this.ts_enable) {
+						for (var index=0; index<this.parent.items.items.length; index++) {
+							item = this.parent.items.items[index];
+							if (item !== this) {
 								item.enable();
 								item.show();
 							}
@@ -82,18 +87,21 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 			width: 50,
 			value: this.value.max_points,
 			minValue: this.max_points_min,
-			labelField: 'Max points'
+			fieldLabel: 'Max points',
+			hidden: true
 		});
 		this.ts_period = Ext.widget('cperiod', {
 			isFormField: false,
 			name: 'period',
 			value:this.value.period,
-			fieldLabel: 'Period'
+			fieldLabel: 'Period',
+			hidden: true
 		});
 		this.ts_sliding_time = Ext.widget('checkbox', {
 			name: 'sliding_time',
 			value:this.value.sliding_time,
-			fieldLabel: 'Sliding time'
+			fieldLabel: 'Sliding time',
+			hidden: true
 		});
 
 		var operation_store_data [
@@ -113,21 +121,25 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 			queryMode: 'local',
 			displayField: 'name',
 			valueField: 'value',
-			labelField: 'Operation',
+			fieldLabel: 'Operation',
 			store: {
 				xtype: 'store',
 				fields: ['value', 'name'],
 				data: operation_store_data
-			}
+			},
+			hidden: true
 		});
 		this.ts_fill = Ext.widget('checkbox', {
 			name: 'fill',
 			value:this.value.fill,
-			fieldLabel: 'Do not cut curve in empty intervals'
+			fieldLabel: 'Do not cut curve in empty intervals',
+			hidden: true
 		});
 		this.ts_forecast = Ext.widget('cforecast', {
 			name: 'forecast',
-			value: this.value.forecast
+			value: this.value.forecast,
+			fieldLabel: 'Forecast',
+			hidden: true
 		});
 
 		this.items = [
@@ -153,8 +165,8 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 
 		var disabled = value[0].raw.value;
 
-		for (var i=0; i<this.items.length; i++) {
-			var item = this.items[i];
+		for (var i=0; i<this.items.items.length; i++) {
+			var item = this.items.items[i];
 			item.setDisabled(disabled);
 		}
 	},
@@ -162,8 +174,8 @@ Ext.define('canopsis.lib.form.field.ctimeserie' , {
 	show: function() {
 		this.callParent(arguments);
 
-		for (int i=1; i<this.items.length; i++) {
-			var item = this.items[i];
+		for (int i=1; i<this.items.items.length; i++) {
+			var item = this.items.items[i];
 			item.show();
 			item.setDisabled(false);
 		};

@@ -165,15 +165,9 @@
 			"advanced": true,
 			"items": [
 				{
-					"xtype": "cfieldset",
-					"title": "Title",
-					"items": [
-						{
-							"xtype": "cforecast",
-							"name": "threshold",
-							"fieldLabel": "fuck"
-						}
-					]
+					"xtype": "cforecast",
+					"name": "forecast",
+					"fieldLabel": "Forecast"
 				}
 			]
 		}, {
