@@ -78,7 +78,7 @@ class engine(cengine):
 			event['tags'] = []
 
 		event["timestamp"] 	= event.get("timestamp", time.time() )
-		event["timestamp"] 	= int(event["timestamp"])
+		event["timestamp"] 	= float(event["timestamp"])
 
 		event["state"]		= event.get("state", 0)
 		event["state_type"] = event.get("state_type", 1)

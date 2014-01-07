@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 #--------------------------------
 # Copyright (c) 2011 "Capensis" [http://www.capensis.com]
 #
@@ -20,6 +21,7 @@
 
 import pyperfstore2
 import time
+import logging
 
 from ctools import parse_perfdata
 from ctools import Str2Number
@@ -27,120 +29,47 @@ from datetime import datetime
 
 from cengine import cengine
 from camqp import camqp
+from md5 import md5
+
+from cstorage import get_storage
+from caccount import caccount
+import pymongo
 
 NAME="perfstore2"
-INTERNAL_QUEUE="beat_perfstore2"
+
+METRIC_CONTENT_LIMIT = 1000
 
 class engine(cengine):
 	def __init__(self, *args, **kargs):
 		cengine.__init__(self, name=NAME, *args, **kargs)
 
-		self.beat_interval =  300
+		self.beat_interval = 10
 
 	def create_amqp_queue(self):
 		super(engine, self).create_amqp_queue()
 
 	def pre_run(self):
-		import logging
-		self.manager = pyperfstore2.manager(logging_level=logging.INFO)
-
-		self.internal_amqp = camqp(logging_level=logging.INFO, logging_name="%s-internal-amqp" % self.name)
-		self.internal_amqp.add_queue(
-			queue_name=INTERNAL_QUEUE,
-			routing_keys=["#"],
-			callback=self.on_internal_event,
-			no_ack=True,
-			exclusive=False,
-			auto_delete=False
-		)
-
-		self.internal_amqp.start()
+		self.storage = get_storage(account=caccount(user='root', group='root'))
+		self.backend = self.storage.get_backend('metrics')
+		self.time = time.time()
+		self.logger.setLevel(logging.DEBUG)
+		self.event_count = 0
 
 	def post_run(self):
-		self.internal_amqp.cancel_queues()
-		self.internal_amqp.stop()
-		self.internal_amqp.join()
+		pass
 
-	def to_perfstore(self, rk, perf_data, timestamp, component, resource=None, tags=None):
-
-		if isinstance(perf_data, list):
-			#[ {'min': 0.0, 'metric': u'rta', 'value': 0.097, 'warn': 100.0, 'crit': 500.0, 'unit': u'ms'}, {'min': 0.0, 'metric': u'pl', 'value': 0.0, 'warn': 20.0, 'crit': 60.0, 'unit': u'%'} ]
-
-			for perf in perf_data:
-				metric = perf['metric']
-				value = perf['value']
-
-				dtype = perf.get('type', None)
-				unit = perf.get('unit', None)
-
-				if unit:
-					unit = str(unit)
-
-				vmin  = perf.get('min', None)
-				vmax  = perf.get('max', None)
-				vwarn = perf.get('warn', None)
-				vcrit = perf.get('crit', None)
-				retention = perf.get('retention', None)
-
-				if vmin:
-					vmin = Str2Number(vmin)
-				if vmax:
-					vmax = Str2Number(vmax)
-				if vwarn:
-					vwarn = Str2Number(vwarn)
-				if vcrit:
-					vcrit = Str2Number(vcrit)
-
-				value = Str2Number(value)
-
-				self.logger.debug(" + Put metric '%s' (%s %s (%s)) for ts %s ..." % (metric, value, unit, dtype, timestamp))
-
-				if value == None:
-					self.logger.warning("Invalid value: '%s' (%s: %s)" % (value, rk, metric))
-					continue
-
-				try:
-					# Build Name with "component + resource + metric"
-					name = None
-
-					if not resource:
-						name = "%s%s" % (component, metric)
-					else:
-						name = "%s%s%s" % (component, resource, metric)
-
-					meta_data = {
-						'type': dtype,
-						'min': vmin,
-						'max': vmax,
-						'thd_warn': vwarn,
-						'thd_crit': vcrit,
-						'co': component,
-						're': resource,
-						'me': metric,
-						'unit':unit
-					}
-
-					# Add tags
-					if tags:
-						meta_data['tg'] = tags
-
-					self.manager.push(name=name, value=value, timestamp=timestamp, meta_data=meta_data)
-
-				except Exception, err:
-					self.logger.warning('Impossible to put value in perfstore (%s) (metric=%s, unit=%s, value=%s)', err, metric, unit, value)
-
-		else:
-			raise Exception("Imposible to parse: %s (is not a list)" % perf_data)
+	def beat(self):
+		self.logger.debug('event saved %s' % (self.event_count))
 
 	def work(self, event, *args, **kargs):
 		## Get perfdata
 		perf_data = event.get('perf_data', None)
 		perf_data_array = event.get('perf_data_array', [])
 
-		if perf_data_array == None:
+		if not perf_data_array:
 			perf_data_array = []
 
-		### Parse perfdata
+		### Parse perfdata (old ugly csv style parsing)
 		if perf_data:
 			self.logger.debug(' + perf_data: %s', perf_data)
 
@@ -165,10 +94,13 @@ class engine(cengine):
 				"metric": "cps_state",
 				"value": cps_state
 			})
-
+        
+        # allow working on this uniq array
 		event['perf_data_array'] = perf_data_array
 
-		self.internal_amqp.publish(event, INTERNAL_QUEUE)
+        # Noothing else to do with this event perfdata empty
+		if not perf_data_array:
+			return event
 
 		# Clean perfdata keys
 		for index, perf_data in enumerate(event['perf_data_array']):
@@ -180,26 +112,117 @@ class engine(cengine):
 
 			event['perf_data_array'][index] = new_perf_data
 
-		return event
+		"""
+		metrics looks like :
+		[ {'min': 0.0, 'metric': u'rta', 'value': 0.097, 'warn': 100.0, 'crit': 500.0, 'unit': u'ms'}, {'min': 0.0, 'metric': u'pl', 'value': 0.0, 'warn': 20.0, 'crit': 60.0, 'unit': u'%'} ]
+        """
 
-	def on_internal_event(self, event, msg):
-		## Metrology
-		timestamp = event.get('timestamp', None)
-		perf_data_array = event.get('perf_data_array', [])
+		for perf in perf_data_array:
+			metric = perf['metric']
+			value = perf['value']
+            
+			value = Str2Number(value)
+			if value == None:
+				self.logger.warning("Invalid value: '%s' (%s: %s)" % (value, event['rk'], metric))
+				continue
 
-		### Store perfdata
-		if perf_data_array:
-			tags = event.get('tags', None)
 
-			try:
-				self.to_perfstore(
-					rk=event['rk'],
-					component=event['component'],
-					resource=event.get('resource', None),
-					perf_data=perf_data_array,
-					timestamp=timestamp,
-					tags=tags
-				)
+			dtype = perf.get('type', None)
+			unit = perf.get('unit', None)
 
-			except Exception, err:
-				self.logger.warning("Impossible to store: %s ('%s')" % (perf_data_array, err))
+			if unit:
+				unit = str(unit)
+
+			vmin  = perf.get('min', None)
+			vmax  = perf.get('max', None)
+			vwarn = perf.get('warn', None)
+			vcrit = perf.get('crit', None)
+			retention = perf.get('retention', None)
+
+			if vmin:
+				vmin = Str2Number(vmin)
+			if vmax:
+				vmax = Str2Number(vmax)
+			if vwarn:
+				vwarn = Str2Number(vwarn)
+			if vcrit:
+				vcrit = Str2Number(vcrit)
+
+		
+
+			self.logger.debug(" + Put metric '%s' (%s %s (%s))  @ timestamp %s ..." % (metric, value, unit, dtype, event['timestamp']))
+
+			new_values = {
+				'type'		: dtype,
+				'min'		: vmin,
+				'max'		: vmax,
+				'thd_warn'	: vwarn,
+				'thd_crit'	: vcrit,
+				'co'		: event['component'],
+				're'		: event['resource'],
+				'unit'		: unit,
+			}
+			
+			# This dictionary is for update purposes
+			metric_info = {'rk': event['rk'], 'me': metric}
+			# This dictionary is for metrics db selection purpose
+			query = metric_info.copy()
+			 
+						
+			# Gets previous metric information from db
+			self.logger.debug('finding query : %s' % (metric_info))
+			last_values = self.backend.find_one(metric_info, sort=[('ts_max', pymongo.DESCENDING)])
+
+			# Dictionnary that will set mongodb document to new values
+			keys_set = {'ts_max' : event['timestamp']}
+
+			# Define whether or not a new document have to be insterted
+			insert_document = True
+			
+			if not last_values:
+				# No previous document exists for this metric
+				last_values = metric_info
+				self.logger.debug('no previous values found for identified metric. will create empty values')
+			else:
+				# Is previous document full
+				if last_values['values_count'] < METRIC_CONTENT_LIMIT:
+					# update query can retrieve 
+					query['ts_max'] = last_values['ts_max']
+					insert_document = False
+
+				else:
+					# Then a new one is beeing created 
+					last_values = metric_info
+
+
+
+			for metric_key in new_values:
+				# Is it an intersting key to store 
+				if new_values[metric_key] != None:	
+				 	# if no information about metric or size limit exeeded  new metric document id created 
+					if metric_key not in last_values or last_values[metric_key] != new_values[metric_key]:
+						# Keys to store
+						keys_set[metric_key] = new_values[metric_key]
+						
+			str_timestamp = str(event['timestamp']).replace('.','')
+	
+			# Insert or update
+			if insert_document:
+				# Metric document meta information defined here
+
+				keys_set['rk'] 		= event['rk']
+				keys_set['me'] 		= metric
+				keys_set['ts_min'] 	= event['timestamp']
+				keys_set['value'] 	= {str_timestamp: value}	
+				keys_set['values_count'] = 1
+				self.backend.insert(keys_set)
+				self.logger.debug('Metric values inserted')
+			else:
+				keys_set['value.' + str_timestamp] = value
+				self.backend.update(query, {'$set': keys_set, '$inc': {'values_count': 1}}, sort=[('ts_max', pymongo.DESCENDING)])
+				self.logger.debug(keys_set)
+				self.logger.debug('Metric values updated')
+
+
+			self.logger.debug('last values updated for metric %s on document %s @ %s' % (metric, event['rk'], time.time() - self.time))
+			self.event_count += 1
