@@ -1,9 +1,11 @@
 define(function(require, exports, module) {
-	var Canopsis = Ember.Application.create();
+	Ember.TEMPLATES['application'] = Ember.Handlebars.compile(require('app/text!app/templates/application.html'));
 
-	Canopsis.Router.map(function() {
-		this.resource('canopsis', { path: '/' });
+	var Application = Ember.Application.create({});
+
+	Application.Router.map(function() {
+		this.route('canopsis', { path: '/'});
 	});
 
-	return Canopsis;
+	return Application;
 });

@@ -1,14 +1,16 @@
 require.config({
 	baseUrl: '/static/',
 	paths: {
-		'app': 'core',
+		'app': 'canopsis/core',
 		'lib': 'webcore-libs/dev',
 	}
 });
 
 require([
-	'lib/domReady!',
-	'app/application'
+	'app/application',
+	'app/controller/canopsis',
+	'app/view/navbar',
 ],
-function(domReady, Application) {
+function(Application) {
+	window.Canopsis = Application;
 });
