@@ -1,0 +1,48 @@
+<div class="btn-toolbar canopsis-toolbar" role="toolbar">
+	<div class="btn-group">
+		{{#each toolitems}}
+			<button type="button" class="btn btn-small btn-default" {{action do action}}>
+				{{glyphicon icon}}
+				{{title}}
+			</button>
+		{{/each}}
+	</div>
+</div>
+
+<div class="table-responsive">
+	<table class="table table-striped table-bordered table-hover">
+		<thead>
+			<tr>
+				<th>Line Color</th>
+				<th>Area Color</th>
+				<th>Line Style</th>
+				<th>Area Opacity</th>
+				<th>Z-Index</th>
+				<th>Invert Curve</th>
+				<th>Metric</th>
+				<th>Custom Label</th>
+			</tr>
+		</thead>
+
+		<tbody>
+			{{#each curves}}
+				<tr>
+					<td>{{colorview line_color}}</td>
+					<td>{{colorview area_color}}</td>
+					<td>{{line_style}}</td>
+					<td>{{area_opacity}}</td>
+					<td>{{zindex}}</td>
+					<td>
+						{{#if invert}}
+							{{glyphicon 'ok-circle'}}
+						{{else}}
+							{{glyphicon 'remove-circle'}}
+						{{/if}}
+					</td>
+					<td>{{metric}}</td>
+					<td>{{label}}</td>
+				</tr>
+			{{/each}}
+		</tbody>
+	</table>
+</div>
