@@ -1,10 +1,19 @@
 define(function(require, exports, module) {
-	Ember.TEMPLATES['application'] = Ember.Handlebars.compile(require('app/text!app/templates/application.html'));
+	Ember.TEMPLATES['application'] = Ember.Handlebars.compile(require('text!app/templates/application.html'));
 
 	var Application = Ember.Application.create({});
 
 	Application.Router.map(function() {
-		this.route('canopsis', { path: '/'});
+		this.resource('build', function() {
+			this.resource('accounts');
+			this.resource('groups');
+			this.resource('curves');
+			this.resource('perfdata');
+		});
+
+		this.resource('run', function() {
+			this.resource('dashboard');
+		});
 	});
 
 	return Application;

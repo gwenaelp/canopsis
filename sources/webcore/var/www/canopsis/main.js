@@ -3,13 +3,16 @@ require.config({
 	paths: {
 		'app': 'canopsis/core',
 		'lib': 'webcore-libs/dev',
+		'text': 'webcore-libs/dev/text'
 	}
 });
 
 require([
+	'app/helpers',
 	'app/application',
-	'app/controller/canopsis',
-	'app/view/navbar',
+	'app/controller/application',
+	'app/controller/accounts',
+	'app/controller/groups'
 ],
 function(Application) {
 	window.Canopsis = Application;
