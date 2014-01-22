@@ -9,6 +9,10 @@ define(function(require, exports, module) {
 			this.resource('groups');
 			this.resource('curves');
 			this.resource('perfdata');
+			this.resource('selectors');
+			this.resource('consolidation');
+			this.resource('topologies');
+			this.resource('eventfilter');
 		});
 
 		this.resource('run', function() {

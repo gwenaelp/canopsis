@@ -12,7 +12,11 @@ require([
 	'app/application',
 	'app/controller/application',
 	'app/controller/accounts',
-	'app/controller/groups'
+	'app/controller/groups',
+	'app/controller/curves',
+	'app/controller/perfdata',
+	'app/controller/selectors',
+	'app/controller/consolidation'
 ],
 function(Application) {
 	window.Canopsis = Application;

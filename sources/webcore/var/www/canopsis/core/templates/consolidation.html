@@ -1,0 +1,50 @@
+<div class="btn-toolbar canopsis-toolbar" role="toolbar">
+	<div class="btn-group">
+		{{#each toolitems}}
+			<button type="button" class="btn btn-small btn-default" {{action do action}}>
+				{{glyphicon icon}}
+				{{title}}
+			</button>
+		{{/each}}
+	</div>
+</div>
+
+<div class="table-responsive">
+	<table class="table table-striped table-bordered table-hover">
+		<thead>
+			<tr>
+				<th>Loaded</th>
+				<th>Enabled</th>
+				<th>Name</th>
+				<th>Component</th>
+				<th>Resource</th>
+				<th>Aggregation Interval</th>
+				<th>Aggregation Method</th>
+				<th>Consolidation Method</th>
+				<th>Message</th>
+				<th>Number of elements</th>
+			</tr>
+		</thead>
+
+		<tbody>
+			{{#each consolidations}}
+				<tr>
+					<td>{{enableview loaded}}</td>
+					<td>{{enableview enable}}</td>
+					<td>{{name}}</td>
+					<td>{{component}}</td>
+					<td>{{resource}}</td>
+					<td>{{duration aggregation_interval}}</td>
+					<td><span class="badge">{{aggregation_method}}</span></td>
+					<td>
+						{{#each method in consolidation_method}}
+							<span class="badge">{{method}}</span>
+						{{/each}}
+					</td>
+					<td>{{message}}</td>
+					<td>{{nb_items}}</td>
+				</tr>
+			{{/each}}
+		</tbody>
+	</table>
+</div>

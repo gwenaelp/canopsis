@@ -4,6 +4,11 @@ define(function(require, exports, module) {
 	var Application = require('app/application');
 
 	Application.AccountsRoute = Ember.Route.extend({
+		setupController: function(controller, model) {
+			controller.set('content', model);
+			controller.set('route', this);
+		},
+
 		model: function() {
 			var me = this;
 
@@ -16,7 +21,7 @@ define(function(require, exports, module) {
 
 				var group_prefix = 'group.';
 
-				for(var i = 0; i < data.total; i++) {
+				for(var i = 0; i < data.data.length; i++) {
 					var account = data.data[i];
 
 					var groups = [];
@@ -73,7 +78,13 @@ define(function(require, exports, module) {
 			},
 
 			refresh: function() {
-				console.log(this.get('content'));
+				var controller = this;
+				var route = this.get('route');
+
+				route.model().then(function(model) {
+					controller.set('content', model);
+					controller.set('route', route);
+				});
 			},
 
 			add: function() {

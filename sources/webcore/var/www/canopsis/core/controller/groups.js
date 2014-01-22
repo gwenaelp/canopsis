@@ -14,7 +14,7 @@ define(function(require, exports, module) {
 			}).then(function(data, status, xhr) {
 				var groups = [];
 
-				for(var i = 0; i < data.total; i++) {
+				for(var i = 0; i < data.data.length; i++) {
 					var group = data.data[i];
 
 					groups.push({

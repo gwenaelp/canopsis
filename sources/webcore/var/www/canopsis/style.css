@@ -1,0 +1,55 @@
+body {
+	padding-top: 50px;
+}
+
+th {
+	text-align: center;
+}
+
+.main-content {
+	padding: 40px 15px;
+	text-align: center;
+}
+
+ul.nav li.dropdown:hover > ul.dropdown-menu {
+	display: block;
+}
+
+.canopsis-icon {
+	display: inline-block;
+	margin: auto;
+	width: 16px;
+	height: 16px;
+}
+
+.canopsis-divicon {
+	display: block;
+	margin: auto;
+	width: 16px;
+	height: 16px;
+}
+
+.canopsis-state-ok {
+	background-image: url('/static/canopsis/media/images/states/0.png') !important;
+}
+
+.canopsis-state-warning {
+	background-image: url('/static/canopsis/media/images/states/1.png') !important;
+}
+
+.canopsis-state-critical {
+	background-image: url('/static/canopsis/media/images/states/2.png') !important;
+}
+
+.canopsis-state-unknown {
+	background-image: url('/static/canopsis/media/images/states/3.png') !important;
+}
+
+.canopsis-enabled {
+	background-image: url('/static/canopsis/media/images/bullet_green.png') !important;
+}
+
+.canopsis-disabled {
+	background-image: url('/static/canopsis/media/images/bullet_red.png') !important;
+}
+

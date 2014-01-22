@@ -26,13 +26,7 @@
 		<tbody>
 			{{#each accounts}}
 				<tr>
-					<td>
-						{{#if enable}}
-							{{glyphicon 'ok-circle'}}
-						{{else}}
-							{{glyphicon 'remove-circle'}}
-						{{/if}}
-					</td>
+					<td>{{enableview enable}}</td>
 					<td>{{user}}</td>
 					<td>{{firstname}}</td>
 					<td>{{lastname}}</td>
