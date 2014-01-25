@@ -1,6 +1,7 @@
-define(function(require, exports, module) {
-	Ember.TEMPLATES['application'] = Ember.Handlebars.compile(require('text!app/templates/application.html'));
-
+define([
+	'jquery',
+	'app/lib/ember',
+], function($, Ember) {
 	var Application = Ember.Application.create({});
 
 	Application.Router.map(function() {

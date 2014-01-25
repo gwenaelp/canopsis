@@ -1,6 +1,4 @@
-define(function(require, exports, module) {
-	var Application = require('app/application');
-
+define(['app/lib/ember', 'app/application'], function(Ember, Application) {
 	Application.ApplicationRoute = Ember.Route.extend({
 		model: function() {
 			return {

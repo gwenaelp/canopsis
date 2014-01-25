@@ -1,4 +1,4 @@
-define(function(require, exports, module) {
+define(['moment', 'app/lib/ember'], function(moment, Ember) {
 	Ember.Handlebars.helper('glyphicon', function(icon) {
 		return new Ember.Handlebars.SafeString('<span class="glyphicon glyphicon-' + icon + '"></span>');
 	});

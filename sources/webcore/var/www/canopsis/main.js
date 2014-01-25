@@ -1,14 +1,8 @@
-require.config({
-	baseUrl: '/static/',
-	paths: {
-		'app': 'canopsis/core',
-		'lib': 'webcore-libs/dev',
-		'text': 'webcore-libs/dev/text'
-	}
-});
-
-require([
-	'app/helpers',
+define([
+	'jquery',
+	'bootstrap',
+	'app/lib/helpers',
+	'app/lib/templates',
 	'app/application',
 	'app/controller/application',
 	'app/controller/accounts',
@@ -17,7 +11,6 @@ require([
 	'app/controller/perfdata',
 	'app/controller/selectors',
 	'app/controller/consolidation'
-],
-function(Application) {
+], function($, _bootstrap, _helpers, _tmpls, Application) {
 	window.Canopsis = Application;
 });

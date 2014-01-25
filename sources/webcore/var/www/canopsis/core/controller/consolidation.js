@@ -1,8 +1,8 @@
-define(function(require, exports, module) {
-	Ember.TEMPLATES['consolidation'] = Ember.Handlebars.compile(require('text!app/templates/consolidation.html'));
-
-	var Application = require('app/application');
-
+define([
+	'jquery',
+	'app/lib/ember',
+	'app/application'
+], function($, Ember, Application) {
 	Application.ConsolidationRoute = Ember.Route.extend({
 		model: function() {
 			var me = this;
