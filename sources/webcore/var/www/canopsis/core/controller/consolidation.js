@@ -104,4 +104,6 @@ define([
 			}
 		}
 	});
+
+	return Application.ConsolidationController;
 });

@@ -1,8 +1,11 @@
 define([
 	'jquery',
 	'app/lib/ember',
-], function($, Ember) {
+	'app/lib/ember-data'
+], function($, Ember, DS) {
 	var Application = Ember.Application.create({});
+
+	Application.register("transform:array", DS.ArrayTransform);
 
 	Application.Router.map(function() {
 		this.resource('build', function() {
@@ -19,6 +22,16 @@ define([
 		this.resource('run', function() {
 			this.resource('dashboard');
 		});
+	});
+
+	Application.ApplicationAdapter = DS.RESTAdapter.extend({
+		buildUrl: function(type, id) {
+			if(type === 'account') {
+				return '/' + type + '/' + id;
+			}
+
+			return this._super(type, id);
+		}
 	});
 
 	return Application;

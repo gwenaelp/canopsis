@@ -123,4 +123,6 @@ define([
 			}
 		}
 	});
+
+	return Application.SelectorsController;
 });

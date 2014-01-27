@@ -77,4 +77,6 @@ define([
 			}
 		}
 	});
+
+	return Application.CurvesController;
 });

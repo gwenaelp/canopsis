@@ -47,4 +47,6 @@ define([
 			}
 		}
 	});
+
+	return Application.PerfdataController;
 });

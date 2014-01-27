@@ -1,55 +1,21 @@
 define([
 	'jquery',
 	'app/lib/ember',
-	'app/application'
-], function($, Ember, Application) {
+	'app/application',
+	'app/model/account'
+], function($, Ember, Application, Account) {
 	Application.AccountsRoute = Ember.Route.extend({
 		setupController: function(controller, model) {
-			controller.set('content', model);
 			controller.set('route', this);
+
+			controller.set('content', {
+				'toolitems': controller.toolbar,
+				'accounts': model
+			});
 		},
 
 		model: function() {
-			var me = this;
-
-			return $.ajax({
-				url: '/account/',
-				type: 'GET',
-				contentType: 'application/json',
-			}).then(function(data, status, xhr) {
-				var accounts = [];
-
-				var group_prefix = 'group.';
-
-				for(var i = 0; i < data.data.length; i++) {
-					var account = data.data[i];
-
-					var groups = [];
-
-					for(var j = 0; j < account.groups.length; j++) {
-						groups.push(account.groups[j].substring(group_prefix.length));
-					}
-
-					accounts.push({
-						enable: account.enable,
-						id: account.id,
-						user: account.user,
-						firstname: account.firstname,
-						lastname: account.lastname,
-						mail: account.mail,
-						group: account.aaa_group.substring(group_prefix.length),
-						groups: groups
-					});
-				}
-
-				/* return final model */
-				var controller = me.controllerFor('accounts');
-
-				return {
-					'toolitems': controller.toolbar,
-					'accounts': accounts
-				};
-			});
+			return this.store.findAll('account');
 		}
 	});
 
@@ -82,8 +48,7 @@ define([
 				var route = this.get('route');
 
 				route.model().then(function(model) {
-					controller.set('content', model);
-					controller.set('route', route);
+					route.setupController(controller, model);
 				});
 			},
 
@@ -100,4 +65,6 @@ define([
 			}
 		}
 	});
+
+	return Application.AccountsController;
 });

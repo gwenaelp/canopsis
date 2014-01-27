@@ -68,4 +68,6 @@ define([
 			}
 		}
 	});
+
+	return Application.GroupsController;
 });

@@ -34,4 +34,6 @@ define(['app/lib/ember', 'app/application'], function(Ember, Application) {
 			}
 		}
 	});
+
+	return Application.ApplicationController;
 });
