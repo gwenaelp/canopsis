@@ -1,4 +1,5 @@
 var templates = [
+	'login',
 	'application',
 	'accounts',
 	'groups',

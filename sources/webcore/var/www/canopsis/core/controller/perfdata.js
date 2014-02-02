@@ -1,24 +1,19 @@
 define([
 	'jquery',
 	'app/lib/ember',
-	'app/application'
-], function($, Ember, Application) {
-	Application.PerfdataRoute = Ember.Route.extend({
-		model: function() {
-			var me = this;
-
-			return $.ajax({
-				url: '/perfstore',
-				type: 'GET',
-				contentType: 'application/json'
-			}).then(function(data, status, xhr) {
-				var controller = me.controllerFor('perfdata');
-
-				return {
-					'toolitems': controller.toolbar,
-					'perfdatas': data.data
-				};
+	'app/application',
+	'app/model/perfdata'
+], function($, Ember, Application, Perfdata) {
+	Application.PerfdataRoute = Application.AuthenticatedRoute.extend({
+		setupController: function(controller, model) {
+			controller.set('content', {
+				toolitems: controller.toolbar,
+				perfdatas: model
 			});
+		},
+
+		model: function() {
+			return this.store.findAll('perfdata');
 		}
 	});
 
@@ -39,7 +34,10 @@ define([
 			},
 
 			refresh: function() {
-				;
+				controller.set('content', {
+					'toolitems': this.toolbar,
+					'perfdatas': this.store.findAll('perfdata')
+				});
 			},
 
 			remove: function() {

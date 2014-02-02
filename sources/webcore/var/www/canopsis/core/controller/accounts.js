@@ -4,10 +4,8 @@ define([
 	'app/application',
 	'app/model/account'
 ], function($, Ember, Application, Account) {
-	Application.AccountsRoute = Ember.Route.extend({
+	Application.AccountsRoute = Application.AuthenticatedRoute.extend({
 		setupController: function(controller, model) {
-			controller.set('route', this);
-
 			controller.set('content', {
 				'toolitems': controller.toolbar,
 				'accounts': model
@@ -44,11 +42,9 @@ define([
 			},
 
 			refresh: function() {
-				var controller = this;
-				var route = this.get('route');
-
-				route.model().then(function(model) {
-					route.setupController(controller, model);
+				this.set('content', {
+					toolitems: this.toolbar,
+					accounts: this.store.findAll('account')
 				});
 			},
 

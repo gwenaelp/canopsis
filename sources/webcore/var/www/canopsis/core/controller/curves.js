@@ -1,42 +1,19 @@
 define([
 	'jquery',
 	'app/lib/ember',
-	'app/application'
-], function($, Ember, Application) {
-	Application.CurvesRoute = Ember.Route.extend({
-		model: function() {
-			var me = this;
-
-			return $.ajax({
-				url: '/rest/object/curve',
-				method: 'GET',
-				contentType: 'application/json'
-			}).then(function(data, status, xhr) {
-				var curves = [];
-
-				for(var i = 0; i < data.data.length; i++) {
-					var curve = data.data[i];
-
-					curves.push({
-						line_color: '#' + curve.line_color,
-						area_color: '#' + curve.area_color,
-						line_style: curve.dashStyle,
-						area_opacity: curve.area_opacity,
-						zindex: curve.zIndex,
-						invert: curve.invert,
-						metric: curve.metric,
-						label: curve.label
-					});
-				}
-
-				/* return final model */
-				var controller = me.controllerFor('curves');
-
-				return {
-					'toolitems': controller.toolbar,
-					'curves': curves
-				};
+	'app/application',
+	'app/model/curve'
+], function($, Ember, Application, Curve) {
+	Application.CurvesRoute = Application.AuthenticatedRoute.extend({
+		setupController: function(controller, model) {
+			controller.set('content', {
+				toolitems: controller.toolbar,
+				curves: model
 			});
+		},
+
+		model: function() {
+			return this.store.findAll('curve');
 		}
 	});
 
@@ -65,7 +42,10 @@ define([
 			},
 
 			refresh: function() {
-				;
+				controller.set('content', {
+					'toolitems': this.toolbar,
+					'curves': this.store.findAll('curve')
+				});
 			},
 
 			duplicate: function() {

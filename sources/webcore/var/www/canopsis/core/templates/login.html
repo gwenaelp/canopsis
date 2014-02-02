@@ -1,0 +1,28 @@
+<div class="panel panel-primary">
+	<div class="panel-heading">Please authenticate yourself</div>
+	<div class="panel-body">
+		<form id="cps_auth" role="form">
+			<div class="form-group">
+				<label for="cps_login">Login</label>
+				{{input type="email" class="form-control" id="cps_login" value=username}}
+			</div>
+			<div class="form-group">
+				<label for="cps_password">Password</label>
+				{{input type="password" class="form-control" id="cps_password" value=password}}
+			</div>
+		</form>
+	</div>
+	<div class="panel-footer text-right">
+		<button class="btn btn-primary" {{action login}}>
+			{{glyphicon 'user'}}
+			Login
+		</button>
+	</div>
+</div>
+
+{{#each errors}}
+	<div class="alert alert-danger alert-dismissable">
+		<button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>
+		<strong>Error:</strong> {{message}}
+	</div>
+{{/each}}

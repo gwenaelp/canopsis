@@ -1,5 +1,5 @@
 define(['app/lib/ember', 'app/application'], function(Ember, Application) {
-	Application.ApplicationRoute = Ember.Route.extend({
+	Application.ApplicationRoute = Application.AuthenticatedRoute.extend({
 		model: function() {
 			return {
 				title: 'Canopsis',
@@ -28,9 +28,20 @@ define(['app/lib/ember', 'app/application'], function(Ember, Application) {
 	});
 
 	Application.ApplicationController = Ember.ObjectController.extend({
+		needs: ['login'],
+
 		actions: {
 			openTab: function(url) {
 				this.transitionToRoute(url);
+			},
+
+			logout: function() {
+				this.get('controllers.login').setProperties({
+					'authkey': null,
+					'errors': []
+				});
+
+				this.transitionToRoute('/login');
 			}
 		}
 	});

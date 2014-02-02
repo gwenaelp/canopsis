@@ -31,19 +31,19 @@
 		<tbody>
 			{{#each perfdatas}}
 				<tr>
-					<td>{{co}}</td>
-					<td>{{re}}</td>
-					<td>{{me}}</td>
-					<td>{{r}}</td>
-					<td>{{date-fromnow fts}}</td>
-					<td>{{date-fromnow lts}}</td>
-					<td>{{t}}</td>
-					<td>{{mi}}</td>
-					<td>{{ma}}</td>
-					<td>{{lv}}</td>
-					<td>{{u}}</td>
+					<td>{{component}}</td>
+					<td>{{resource}}</td>
+					<td>{{metric}}</td>
+					<td>{{retention}}</td>
+					<td>{{date-fromnow first_point}}</td>
+					<td>{{date-fromnow last_point}}</td>
+					<td>{{type}}</td>
+					<td>{{min}}</td>
+					<td>{{max}}</td>
+					<td>{{last_value}}</td>
+					<td>{{unit}}</td>
 					<td>
-						{{#each tag in tg}}
+						{{#each tag in tags}}
 							<span class="badge">{{tag}}</span>
 						{{/each}}
 					</td>

@@ -1,49 +1,19 @@
 define([
 	'jquery',
 	'app/lib/ember',
-	'app/application'
-], function($, Ember, Application) {
-	Application.ConsolidationRoute = Ember.Route.extend({
-		model: function() {
-			var me = this;
-
-			return $.ajax({
-				url: '/rest/object/consolidation',
-				type: 'GET',
-				contentType: 'application/json'
-			}).then(function(data, status, xhr) {
-				var consolidations = [];
-
-				for(var i = 0; i < data.data.length; i++) {
-					var conso = data.data[i];
-
-					consolidations.push({
-						id: conso.id,
-
-						loaded: conso.loaded,
-						enable: conso.enable,
-
-						name: conso.crecord_name,
-						component: conso.component,
-						resource: conso.resource,
-
-						aggregation_interval: conso.aggregation_interval,
-						aggregation_method: conso.aggregation_method,
-						consolidation_method: conso.consolidation_method,
-
-						message: conso.output_engine,
-						nb_items: conso.nb_items
-					});
-				}
-
-				/* return final model */
-				var controller = me.controllerFor('consolidation');
-
-				return {
-					'toolitems': controller.toolbar,
-					'consolidations': consolidations
-				};
+	'app/application',
+	'app/model/consolidation'
+], function($, Ember, Application, Consolidation) {
+	Application.ConsolidationRoute = Application.AuthenticatedRoute.extend({
+		setupController: function(controller, model) {
+			controller.set('content', {
+				toolitems: controller.toolbar,
+				consolidations: model
 			});
+		},
+
+		model: function() {
+			return this.store.findAll('consolidation');
 		}
 	});
 
@@ -80,7 +50,10 @@ define([
 			},
 
 			refresh: function() {
-				;
+				this.set('content', {
+					toolitems: this.toolbar,
+					consolidations: this.store.findAll('consolidation')
+				});
 			},
 
 			add: function() {

@@ -1,37 +1,19 @@
 define([
 	'jquery',
 	'app/lib/ember',
-	'app/application'
-], function($, Ember, Application) {
-	Application.GroupsRoute = Ember.Route.extend({
-		model: function() {
-			var me = this;
-
-			return $.ajax({
-				url: '/rest/object/group',
-				method: 'GET',
-				contentType: 'application/json'
-			}).then(function(data, status, xhr) {
-				var groups = [];
-
-				for(var i = 0; i < data.data.length; i++) {
-					var group = data.data[i];
-
-					groups.push({
-						id: group.id,
-						name: group.crecord_name,
-						description: group.description
-					});
-				}
-
-				/* return final model */
-				var controller = me.controllerFor('groups');
-
-				return {
-					'toolitems': controller.toolbar,
-					'groups': groups
-				};
+	'app/application',
+	'app/model/group'
+], function($, Ember, Application, Group) {
+	Application.GroupsRoute = Application.AuthenticatedRoute.extend({
+		setupController: function(controller, model) {
+			controller.set('content', {
+				toolitems: controller.toolbar,
+				groups: model
 			});
+		},
+
+		model: function() {
+			return this.store.findAll('group');
 		}
 	});
 
@@ -56,7 +38,10 @@ define([
 			},
 
 			refresh: function() {
-				console.log('refresh');
+				this.set('content', {
+					toolitems: this.toolbar,
+					groups: this.store.findAll('group')
+				});
 			},
 
 			add: function() {
