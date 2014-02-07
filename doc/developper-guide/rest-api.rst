@@ -1,475 +1,286 @@
-Rest API
-========
+Web API
+=======
 
-.. danger:: *TODO* : improve this page ergonomy
+The web interface interacts with the MongoDB server via the Web API, in order to
+get data more easily.
 
-General points
---------------
+Webservices
+-----------
 
-* In the following document when there is an ':' in url it means that this value is a variable that you must provide .
-* Each webservice anwser with a json object with the following scheme :
++-------------------+-------------------------------------------------+
+| account           | Used to interact with user accounts             |
++-------------------+-------------------------------------------------+
+| auth              | Used for authentication                         |
++-------------------+-------------------------------------------------+
+| calendar_events   | Used to retrieve ICS events                     |
++-------------------+-------------------------------------------------+
+| entities          | Used to retrieve Canopsis entities              |
++-------------------+-------------------------------------------------+
+| event             | Used to send event from the web interface       |
++-------------------+-------------------------------------------------+
+| files             | Used to interact with the GridFS store          |
++-------------------+-------------------------------------------------+
+| perfstore         | Used to interact with perfdatas                 |
++-------------------+-------------------------------------------------+
+| reporting         | Used to generate reports and send them via mail |
++-------------------+-------------------------------------------------+
+| rest              | Used to interact with MongoDB collections       |
++-------------------+-------------------------------------------------+
+| rights            | Used to set access rights on a single record    |
++-------------------+-------------------------------------------------+
+| ui_view           | Used to handle views                            |
++-------------------+-------------------------------------------------+
+| ui_widgets        | Used to retrieve widgets                        |
++-------------------+-------------------------------------------------+
+| ui_topology       | Used to retrieve topology operators             |
++-------------------+-------------------------------------------------+
+| ui_locales        | Used to set environment locales                 |
++-------------------+-------------------------------------------------+
+
+Response format
+---------------
+
+The ``Content-Type`` of response is generally ``application/json``, in the other
+case, the response format will be specified.
+
+For all JSON response, the format is the following :
 
 .. code-block:: javascript
 
-	{
-	    'total': int,        // The total of data returned (ex: if 5 accounts were found, the total is 5).
-	    'success': bool,     // If the request is a success or not. In case of failure the output message is given in data field.
-	    'data': array        // Usually an array.
-	}
-
-* If an error occurred the webservice return the appropriate HTTP error with the python exception as comment.
-
-Rest
-----
-
-*GET : /rest/:namespace/:ctype/:_id*
-*GET : /rest/:namespace/:ctype*
-*GET : /rest/:namespace*
-Main service to get any canopsis database record.
-
-* arguments :
-
-.. code-block:: plain
-
-	namespace - mongo collection used
-	ctype (optional) - Canopsis type record ('account','group','view',etc ...).
-	_id (optional) - Requested item id.
-
-* GET arguments :
-
-.. code-block:: plain
-
-	limit (default 20) - Number of item in answer.
-	start (default 0) - Start index of the answer (ex: in a list of 100 you can start from the index 40 to the specified limit).
-	search (optional) - String that the object id must contain.
-	filter (optional) - Mongo filter to add to general filter.
-	sort (optional) - Sorting option DESC/ASC.
-	query (optional) - String that the object name must contain.
-	onlyWritable (optional) - Only return object writable by the account.
-	ids (optional) - List of the requested items id.
-	_id (optional) - The id of the requested item.
-
-
-*POST : /rest/:namespace/:ctype/:_id*
-*POST : /rest/:namespace/:ctype*
-Main service to create any database record.
-
-* arguments :
-
-.. code-block:: plain
-
-	namespace - mongo collection used
-	ctype (optional) - Canopsis type record ('account','group','view',etc ...).
-	_id (optional) - Item id.
-
-* POST arguements :
-
-.. code-block:: plain
-
-	The full object in json form to insert in database.
-
-
-*PUT : /rest/:namespace/:ctype/:_id*
-*PUT : /rest/:namespace/:ctype*
-Main service to update any database record.
-
-* arguments :
-
-.. code-block:: plain
-
-	namespace - mongo collection used
-	ctype - Canopsis type record ('account','group','view',etc ...).
-	_id (optional) - Item id.
-
-* PUT arguments :
-
-.. code-block:: plain
-
-	the object with its id (if not given in url) and all the field to modify
-
-
-*DELETE : /rest/:namespace/:ctype/:_id*
-*DELETE : /rest/:namespace/:ctype*
-Main service to delete any database record.
-
-* arguments :
-
-.. code-block:: plain
-
-	namespace - mongo collection used
-	ctype - Canopsis type record ('account','group','view',etc ...).
-	_id (optional) - Item id.
-
-* DELETE arguments :
-
-.. code-block:: plain
-
-	the id of the item to removed in a json object
+     {
+          total:    // number of event matched
+          data:     // list of all records retrieved according to attributes limit, start and sort
+          success:  // True if the query was a success, False otherwise
+     }
 
 Account webservice
 ------------------
 
-*GET : /account/me*
-Use to know if you're logged and to retrieve your personnal informations (they're returned in the data field)
-
-* arguments : None
-* result : The user account in json object form
-
-
-_recheck this one_
-*POST : /account/setConfig/:_id*
-Use to change one value of the current user record.
-
-* arguments :
-* result : The status of the request
-
-
-*GET : /account/getAuthKey/:account_name*
-Use to retrieve your unique authentication key
-
-* arguments :
-
-.. code-block:: plain
-
-	account_name - the name of the account that you want the key
-
-* result : the authkey in a json object
-
-
-*GET : /account/getNewAuthKey/:account_name*
-Use to get a new authentication key for account in the url
-
-* arguments :
-
-.. code-block:: plain
-
-	account_name - the name of the account that you want a new key
-
-* result : the new authkey in a json object
-
-*GET : /account/:account_id*
-Use to retrieve an account or the full list of account
-
-* arguments :
-
-.. code-block:: plain
-
-	account_id(optionnal) - use to request only one account
-
-* GET arguments : those arguments are optionnal
-
-.. code-block:: plain
-
-	limit - the maximal length of returned list (default: 20)
-	start - the request start index (ex: the second page of 60 item long list is between the index 20 and 40)
-
-* result : list of account
-
-
-*POST : /account/*
-Use to create or update a new account
-
-* POST arguments :
-
-.. code-block:: plain
-
-	data - json object with information to build the account, if the id already exist the old account is updated with the new provided options.
-
-* result : no result (implanted soon)
-
-
-*DELETE : /account/:account_id*
-Delete and account
-
-* arguments :
-
-.. code-block:: plain
-
-	account_id - the id of the account to remove
-
-* result : return an httpError 404 if not found
-
-
-*POST : /account/addToGroup/:group_id/:account_id*
-Add an account to a group
-
-* arguments :
-
-.. code-block:: plain
-
-	The id of group/account
-
-* result : standart json output or http error with corresponding error in output
-
-
-*POST : /account/removeFromGroup/:group_id/:account_id*
-Remove an account from a group
-
-* arguments :
-
-.. code-block:: plain
-
-	The id of group/account
-
-* result : standart json output or http error with corresponding error in output
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| **Request** | **URL**                                             | **Description**                                                                            |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/me``                                     | Get current account                                                                        |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/getAvatar/:_id``                         | Get avatar of specific account                                                             |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/getAvatar``                              | Get avatar of current account                                                              |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| POST        | ``/account/setConfig/:_id``                         | Set setting ``_id`` to ``value`` (passed via POST)                                         |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/getAuthKey/:dest_account``               | Get **authkey** for ``dest_account``                                                       |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/getNewAuthKey/:dest_account``            | Generate a new **authkey** for ``dest_account``                                            |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/:_id``                                   | Get specific account                                                                       |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| GET         | ``/account/``                                       | Get all accounts                                                                           |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| POST        | ``/account/``                                       | Create a new account                                                                       |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| PUT         | ``/account/:_id``                                   | Update specific account (*NB:* ``_id`` *must be passed via request's body if not in URL*)  |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| DELETE      | ``/account/:_id``                                   | Delete specific account (*NB:* ``_id`` *must be passed via request's body if not in URL*)  |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| POST        | ``/account/addToGroup/:group_id/:account_id``       | Add user ``account_id`` to group ``group_id``                                              |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
+| POST        | ``/account/removeFromGroup/:group_id/:account_id``  | Remove user ``account_id`` from group ``group_id``                                         |
++-------------+-----------------------------------------------------+--------------------------------------------------------------------------------------------+
 
 Auth webservice
 ---------------
 
-*GET : /auth/:login/:password*
-Used to log into canopsis
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                         | **Description**                                                                                                                                 |
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+|             | ``/account/checkAuthPlugin1``   |                                                                                                                                                 |
+| GET         +---------------------------------+ Test checkAuthPlugin                                                                                                                            |
+|             | ``/account/checkAuthPlugin2``   |                                                                                                                                                 |
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/auth/:login/:password?mode`` | Authenticate user with ``login`` and ``password``, specify authentication method with ``mode`` parameter (``plain``, ``shadow`` or ``crypted``) |
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/autoLogin/:key``             | Authenticate user with authkey ``key``                                                                                                          |
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
+|             | ``/logout``                     |                                                                                                                                                 |
+| GET         +---------------------------------+ Log user out                                                                                                                                    |
+|             | ``/disconnect``                 |                                                                                                                                                 |
++-------------+---------------------------------+-------------------------------------------------------------------------------------------------------------------------------------------------+
 
-* GET arguments :
+Calendar Events webservice
+--------------------------
 
-.. code-block:: plain
++-------------+------------------------------------------------+-------------------------------------------------------------------------------------------+
+| **Request** | **URL**                                        | **Description**                                                                           |
++-------------+------------------------------------------------+-------------------------------------------------------------------------------------------+
+| GET         | ``/cal/:source/:interval_start/:interval_end`` | Get all ICS events for ``source`` in time interval [``interval_start``, ``interval_end``] |
++-------------+------------------------------------------------+-------------------------------------------------------------------------------------------+
 
-	password - the password
-	cryptedKey - set true if the given password is hashed with sha1 + hexdigest + timestamp (strongest security)
-	shadow - set true if the given password is hashed with sha1 + hexdigest
+Entities webservice
+-------------------
 
-* result : return http error if auth failed or log user in
-
-
-*GET : /autoLogin/:key*
-Log user with his authkey
-
-* arguments :
-
-.. code-block:: plain
-
-	the personal authkey
-
-* result : json object with account or http error
-
-*GET /logout*
-*GET /disconnect*
-Logout the user, clean connection cookie and close session
-
-* arguements : none
-* result : json object with success
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                     | **Description**                                                                                    |
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
+| GET         | ``/entities/``              | Get all entities                                                                                   |
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
+| POST        | ``/entities/``              | Get entities according to the Mongo filter passed in ``filter`` parameter passed in request's body |
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
+| GET         | ``/entities/:etype``        | Get all entities of type ``etype``                                                                 |
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
+| GET         | ``/entities/:etype/:ename`` | Get all entities of type ``etype`` and name ``ename``, **it should return only one document**      |
++-------------+-----------------------------+----------------------------------------------------------------------------------------------------+
 
 Event webservice
 ----------------
 
-*POST : /event/*
-*POST : /event/:routing_key*
-Used to post an event, then the event is process by engines like standard supervision event.
++-------------+--------------------------+----------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                  | **Description**                                                                                    |
++-------------+--------------------------+----------------------------------------------------------------------------------------------------+
+| POST        | ``/event/``              | Get all entities                                                                                   |
++-------------+--------------------------+----------------------------------------------------------------------------------------------------+
+| POST        | ``/event/:routing_key``  | Get entities according to the Mongo filter passed in ``filter`` parameter passed in request's body |
++-------------+--------------------------+----------------------------------------------------------------------------------------------------+
 
-* arguments :
+Files webservice
+----------------
 
-.. code-block:: plain
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| **Request** | **URL**            | **Description**                                                                                                                  |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/files``         | Get all files                                                                                                                    |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/files/:metaId`` | Get file identified by ``metaId``                                                                                                |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/files``         | URL for file-uploading                                                                                                           |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| PUT         | ``/files/:metaId`` | Update specific file identified by ``metaId`` (must be present in request's body attribute ``id`` if ``metaId`` isn't specified) |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
+| DELETE      | ``/files/:metaId`` | Remove specific file identified by ``metaId`` (must be present in request's body attribute ``id`` if ``metaId`` isn't specified) |
++-------------+--------------------+----------------------------------------------------------------------------------------------------------------------------------+
 
-	routing_key (optional) - you can provide the routing key in the url, or put the elements in POST form
-
-* POST arguements :
-
-.. code-block:: plain
-
-	connector
-	connector_name
-	event_type
-	source_type
-	component
-	resource
-	state
-	state_type  (default : 1)
-	perf_data  (optional)
-	perf_data_array  (optional)
-	output  (optional)
-	long_output  (optional)
-
-File webservice
----------------
-
-*GET : /files/:file_metaId*
-*GET : /files*
-Use to retrieve file. Give the whole list of files if metaId not given.
-
-* arguments:
-
-.. code-block:: plain
-
-	file_metaId - This id is returned by all webservices dealing with file
-
-* result : file, or list of file in json format
-
-*POST : /files*
-Update the name of a file.
-
-* POST arguments :
-
-.. code-block:: plain
-
-	metaId - The file to update metaId.
-	file_name - The new file name.
-
-*DELETE /files/:file_metaId*
-Delete a file.
-
-* arguments :
-
-.. code-block:: plain
-
-	file_metaId - the file to remove metaId.
-
-Perfstore webservice
+PerfStore webservice
 --------------------
 
-*POST : /perfstore/values*
-*POST : /perfstore/values/:start/:stop*
-Use to get metrics on the specified time
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                             | **Description**                                                                                                      |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/perfstore/get_all_metrics``      | Get all metrics                                                                                                      |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/perfstore/values``               | Get values for nodes                                                                                                 |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/perfstore/values/:start/:stop``  | Get values for nodes in time interval [``start``, ``stop``]                                                          |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| DELETE      | ``/perfstore/:_id``                 | Delete metrics identified by ``_id`` (must be present in request's body, as a list of ids, if not specified in URL)  |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| PUT         | ``/perfstore``                      | Update metrics                                                                                                       |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/perfstore/perftop``              | Get metrics that match a Mongo filter, and return them sorted by their values                                        |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/perfstore/perftop/:start/:stop`` | Get metrics that match a Mongo filter, and return them sorted by their values in time interval [``start``, ``stop``] |
++-------------+-------------------------------------+----------------------------------------------------------------------------------------------------------------------+
 
-* arguments :
-
-.. code-block:: plain
-
-	start - the timestamp used like a beginning index
-	stop - the timestamp used like an ending index
-
-* POST arguments :
-
-.. code-block:: plain
-
-	nodes - list of metric nodes requested
-	interval (optional) - the interval time between two points
-	aggregate_method (optional) - the used method for aggregate points, mean/max/min/last/first/delta (Mean by default)
-	use_window_ts (optional) - use the timestamp of the time window
-
-*GET : /perfstore/get_all_metrics*
-Used to get the full list of metrics
-
-* GET arguments :
-
-.. code-block:: plain
-
-	limit - the max number of returned result (default : 20)
-	start - the start index (default : 0)
-	search - string that metrics must contain
+.. include:: ../_static/rest/perfstore/values.rst
 
 Reporting webservice
 --------------------
 
-*Get : /reporting/:startTime/:stopTime/:view_name/:mail*
-*Get : /reporting/:startTime/:stopTime/:view_name*
-Used to launch a view export and optionally send it by mail.
++-------------+------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                                              | **Description**                                                                                                                     |
++-------------+------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/reporting/:startTime/:stopTime/:view_name/:mail`` | Generate report for ``view_name`` in time interval [``startTime``, ``stopTime``], and send the resulting PDF to ``mail`` if defined |
++-------------+------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/sendreport``                                      | Send report by mail                                                                                                                 |
++-------------+------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/export_svg``                                      | Used to download SVG data in request's parameters                                                                                   |
++-------------+------------------------------------------------------+-------------------------------------------------------------------------------------------------------------------------------------+
 
-
-* arguments :
-
-.. code-block:: plain
-
-	startTime - timestamp used as beggening time index.
-	stopTime - timestamp used as ending time index.
-	view_name - the name of the view to export.
-	mail (optional) - the recipient email.
-
-* result : json file with action success state
-
-
-*POST : /sendreport*
-Used to send a report file to an email recipient.
-
-* arguments :
-
-.. code-block:: plain
-
-	recipients - List of recipients
-	_id - Id of the file to send
-	body - body of the email
-	subject - subject of the email
-
-* result : json file with action success state
-
-
-
-*POST : /export_svg*
-Webservice used by highchart in order to export graph to svg file.
-
-* POST arguments:
-
-.. code-block:: plain
-
-	filename - The svg file name
-	svg - SVG file
-
-result : return svg file
-
-Right webservice
-----------------
-
-*PUT : /rights/:namespace/:_id*
-Change object owner/rights.
-
-* arguments : 
-
-.. code-block:: plain
-
-	namespace - Mongo collection used.
-	_id - Id of item to modify access.
-
-* PUT arguements:
-
-.. code-block:: plain
-
-	aaa_owner (optional) - New item owner.
-	aaa_group (optional) - New item group.
-	aaa_access_owner (optional) - New w/r owner rights.
-	aaa_access_group (optional) - New w/r group rights.
-	aaa_access_other (optional) - New w/r other rights.
-
-
-View webservice
+REST webservice
 ---------------
 
-*GET : /ui/view*
-Get view tree.
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                             | **Description**                                                                                                                   |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/media/:namespace/:_id``     | Download media file associated to the record identified by ``_id`` in the Mongo collection ``namespace``                          |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/events_tress/``             | Get all events hierarchy                                                                                                          |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/events_tress/:rk``          | Get events hierarchy for ``rk``, here ``rk`` acts as a path and allows you to retrieve sub-trees                                  |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/:namespace``                | Get all records in Mongo collection ``namespace``                                                                                 |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/:namespace/:ctype``         | Get all records of type ``type`` in Mongo collection ``namespace``                                                                |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| GET         | ``/rest/:namespace/:ctype/:_id``    | Get record ``_id`` of type ``type`` in Mongo collection ``namespace``                                                             |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/rest/:namespace/:ctype``         | Create new record of type ``type`` in Mongo collection ``namespace``                                                              |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| POST        | ``/rest/:namespace/:ctype/:_id``    | Update record ``_id`` of type ``type`` in Mongo collection ``namespace``                                                          |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| PUT         | ``/rest/:namespace/:ctype/:_id``    | Update record ``_id`` of type ``type`` in Mongo collection ``namespace`` (``_id`` must be passed in request's body if not in URL) |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
+| DELETE      | ``/rest/:namespace/:ctype/:_id``    | Delete record ``_id`` of type ``type`` in Mongo collection ``namespace`` (``_id`` must be passed in request's body if not in URL) |
++-------------+-------------------------------------+-----------------------------------------------------------------------------------------------------------------------------------+
 
-* arguments : None
-* result : View tree as json object.
+Rights webservice
+-----------------
 
-*DELETE : /ui/view/:name*
-Delete view.
++-------------+-------------------------------------+---------------------------------------------------------------------------------+
+| **Request** | **URL**                             | **Description**                                                                 |
++-------------+-------------------------------------+---------------------------------------------------------------------------------+
+| PUT         | ``/rights/:namespace/:crecord_id``  | Change access rights on record ``crecord_id`` in Mongo collection ``namespace`` |
++-------------+-------------------------------------+---------------------------------------------------------------------------------+
 
-* arguments :
->name - The name of the view to delete.
-
-
-*POST : /ui/view*
-*POST : /ui/view/:name*
-Used to create/update a view.
-
-* arguments :
->name (optional) - View name.
-* POST arguments :
-
-.. code-block:: plain
-
-	The view as json object (with field to update in case of update).
-
-
-*GET : /ui/view/export/:_id*
-Used to get a json file with the specified view
-
-* arguments :
-
-.. code-block:: plain
-
-	_id - Id of the view to export.
-
-* result : The json file corresponding to the view.
-
-Widgets webservice
+UI View webservice
 ------------------
 
-*GET : /ui/widgets*
-Get widget list.
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| **Request** | **URL**                             | **Description**                                                                                 |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| GET         | ``/ui/view``                        | Get all views                                                                                   |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| DELETE      | ``/ui/view/:_id``                   | Remove view ``_id`` (must be passed in request's body as a list of ids if not specified in URL) |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| POST        | ``/ui/view``                        | Create views                                                                                    |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| PUT         | ``/ui/view``                        | Update views                                                                                    |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| GET         | ``/ui/view/exist/:name``            | Check if view ``name`` exists                                                                   |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| GET         | ``/ui/view/export/:_id``            | Download view ``_id`` as a JSON file (``_id`` must be passed in request's body if not in URL)   |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| GET         | ``/ui/view/export/object/:_id``     | Download record ``_id`` as a JSON file (``_id`` must be passed in request's body if not in URL) |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
+| POST        | ``/ui/view/export/objects``         | Download records as a JSON file                                                                 |
++-------------+-------------------------------------+-------------------------------------------------------------------------------------------------+
 
-* arguments : None
-* result : List of widgets with their configuration
+UI Widgets webservice
+---------------------
 
++-------------+---------------------------+--------------------------------------+
+| **Request** | **URL**                   | **Description**                      |
++-------------+---------------------------+--------------------------------------+
+| GET         | ``/ui/widgets``           | Get all widgets                      |
++-------------+---------------------------+--------------------------------------+
+| GET         | ``/ui/widgets.css``       | Get CSS for all widgets              |
++-------------+---------------------------+--------------------------------------+
+| GET         | ``/ui/thirdpartylibs.js`` | Get third party Javascript libraries |
++-------------+---------------------------+--------------------------------------+
 
-*GET : /ui/widgets.css*
-Compile all widget css.
+UI Topology webservice
+----------------------
 
-* arguments : None
-* result : A compiled css file of all widget css.
++-------------+----------------------------+----------------------------+
+| **Request** | **URL**                    | **Description**            |
++-------------+----------------------------+----------------------------+
+| GET         | ``/topology/getOperators`` | Get all topology operators |
++-------------+----------------------------+----------------------------+
+
+UI Locales webservice
+---------------------
+
++-------------+---------------------------------------+-------------------------------------------+
+| **Request** | **URL**                               | **Description**                           |
++-------------+---------------------------------------+-------------------------------------------+
+| GET         | ``/:lang/static/canopsis/locales.js`` | Initialize environment to locale ``lang`` |
++-------------+---------------------------------------+-------------------------------------------+
+| GET         | ``/static/canopsis/locales.js``       | Initialize environment to locale 'en'     |
++-------------+---------------------------------------+-------------------------------------------+
