@@ -10,196 +10,317 @@ AMQP Informations
     * Exchange Options:   type: "topic", durable: true, auto_delete: false
     * Content Type:       "application/json"
 
-Event structure
----------------
+Basic Event Structure
+---------------------
+
+Here is the basic event structure, common to all event-types :
 
 .. code-block:: javascript
 
     {
-      '_id':               // (reserved) MongoDB
-      'event_id':          // (reserved) Original in alerts exchange
-      'connector':         // Connector type (gelf, nagios, snmp, ...),
-      'connector_name':    // Connector name (nagios1, nagios2 ...),
-      'event_type':        // Event type (check, log, trap, ...),
-      'source_type':       // Source type ('component' or 'resource'),
-      'component':         // Component name,
-      'resource':          // Ressource name,
-      'timestamp':         // UNIX seconds timestamp (UTC),
-      'state':             // State (0 (Ok), 1 (Warning), 2 (Critical), 3 (Unknown)),
-      'state_type':        // State type (O (Soft), 1 (Hard)),
-      'scheduled':         // (optional) True if this is a scheduled event
-      'last_state_change': // (reserved) Last timestamp after state change,
-      'previous_state':    // (reserved) Previous state (after change),
-      'output':            // Event message,
-      'long_output':       // Event long message,
-      'tags':              // Event Tags (default: []),
-      'display_name':      // The name to display (customization purpose)
+        'connector':        // Connector Type (gelf, nagios, snmp, ...)
+        'connector_name':   // Connector Identifier (nagios1, nagios2, ...)
+        'event_type':       // Event type (see below)
+        'source_type':      // Source of event ('component', or 'resource')
+        'component':        // Component's name
+        'resource':         // Resource's name (only if source_type is 'resource')
+
+        // The following is optional
+        'hostgroups':       // Nagios hostgroups for component, default []
+        'servicegroups':    // Nagios servicegroups for resource, default []
+        'timestamp':        // UNIX timestamp for when the event  was emitted (optional: set by the server to now)
+
+        'output':           // Message
+        'long_output':      // Description
+        'display_name':     // Name to display in Canopsis
+        'tags':             // Tags for the event (optional, the server adds connector, connector_name, event_type, source_type, component and resource if present)
+
+        'perf_data':        // Nagios formatted perfdata string
+        'perf_data_array':  // array of metrics (see below)
     }
+
+Event Check Structure
+---------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'check',
+
+        'state':                // Check state (0 - OK, 1 - WARNING, 2 - CRITICAL, 3 - UNKNOWN), default is 0
+        'state_type':           // Check state type (0 - SOFT, 1 - HARD), default is 1
+
+        // The following is optional
+        'scheduled':            // True if the check was scheduled, False otherwise
+
+        'check_type':           // Nagios Check Type (host or service)
+        'current_attempt':      // Attempt ID for the check
+        'max_attempts':         // Max attempts before sending HARD state
+        'execution_time':       // Check duration
+        'latency':              // Check latency (time between schedule and execution)
+        'command_name':         // Check command
+    }
+
+Event Log Structure
+-------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'log',
+
+        'output':           // Becomes mandatory
+        'long_output':      // Remains optional
+        'display_name':     // Remains optional
+
+        'level':            // Optional log level
+        'facility':         // Optional log facility
+    }
+
+Event Acknowledgment Structure
+------------------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'ack',
+
+        'ref_rk':               // Routing Key of acknowledged event
+        'author':               // Acknowledgment author
+        'output':               // Acknowledgment comment
+    }
+
+Event Downtime Structure
+------------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'downtime',
+
+        'author':               // Downtime author
+        'output':               // Downtime comment
+        'start':                // UNIX timestamp for downtime's start
+        'end':                  // UNIX timestamp for downtime's end
+        'duration':             // Downtime's duration
+        'entry':                // Downtime's schedule date/time (as a UNIX timestamp)
+        'fixed':                // Does the downtime starts at 'start' or at next check after 'start' ?
+        'downtime_id':          // Downtime's identifier
+    }
+
+Event SNMP Structure
+--------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'trap',
+        'snmp_severity':        // SNMP severity
+        'snmp_state':           // SNMP state
+        'snmp_oid':             // SNMP oid
+    }
+
+Event Calendar Structure
+------------------------
+
+After defining the basic event structure, add the following fields :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'calendar',
+        'resource':                 // iCal event UID
+        'start':                    // iCal event start UNIX timestamp
+        'end':                      // iCal event end UNIX timestamp
+        'all_day':                  // True or False
+        'output':                   // iCal event title
+    }
+
+Event Perf Structure
+--------------------
+
+An event of type 'perf' will never be saved in database, it is used to send only
+perfdata :
+
+.. code-block:: javascript
+
+    {
+        'event_type': 'perf',
+
+        'perf_data':
+        'perf_data_array':
+    }
+
+See bellow for more informations about those fields.
 
 Metrology
 ^^^^^^^^^
-.. code-block:: javascript
 
-    'perf_data':      Performance data ("Nagios format":http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN201)
-
-or
+To send perfdata to Canopsis, you just need to specify one of the following fields :
 
 .. code-block:: javascript
 
-    'perf_data_array': Array of performance data with metric's type ('GAUGE', 'DERIVE', 'COUNTER', 'ABSOLUTE'), Ex:
-                            [
-                              {'metric': 'shortterm', 'value': 0.25, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' },
-                              {'metric': 'midterm',   'value': 0.16, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' },
-                              {'metric': 'longterm',  'value': 0.12, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' }
-                            ]
+    {
+        'perf_data':        // Performance data ("Nagios format":http://nagiosplug.sourceforge.net/developer-guidelines.html#AEN201)
+        'perf_data_array':  // Array of performance data with metric's type ('GAUGE', 'DERIVE', 'COUNTER', 'ABSOLUTE'), Ex:
+        [
+            {'metric': 'shortterm', 'value': 0.25, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' },
+            {'metric': 'midterm',   'value': 0.16, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' },
+            {'metric': 'longterm',  'value': 0.12, 'unit': None, 'min': None, 'max': None, 'warn': None, 'crit': None, 'type': 'GAUGE' }
+        ]
+    }
 
+Basic Alert Structure
+---------------------
 
-Event Type
-^^^^^^^^^^
-
-* **check**: Result of control
-* **comment**: Result's Comment
-* **trap**: SNMP Trap
-* **log**: Log
-* **user**: User input
-* **selector**:  Selector result
-* **sla**:  Sla result
-* **eue**:  EUE result
-
-Nagios/Icinga
--------------
+An alert is a notification of a state change after the event were saved in MongoDB,
+it contains the following fields :
 
 .. code-block:: javascript
 
-    'connector':  'nagios'
-    'event_type': 'check', 'ack', 'notification', 'downtime'
+    {
+        '_id':          // MongoDB document ID
+        'event_id':     // Event identifier (the routing key)
+    }
 
-Extra - check
-^^^^^^^^^^^^^
 
-.. code-block:: javascript
+Integration with Nagios/Icinga or Shinken
+-----------------------------------------
 
-    'check_type':       ,
-    'current_attempt':  ,
-    'max_attempts':     ,
-    'execution_time':   ,
-    'latency':          ,
-    'command_name':     ,
-    'address':          ,
-
-Gelf (Graylog)
---------------
+The Nagios Event Broker module will send, to Canopsis, events with the following informations :
 
 .. code-block:: javascript
 
-    'connector':  'gelf'
-    'event_type': 'log'
+    {
+        'connector': 'nagios' or 'shinken'
+        'event_type': 'check' or 'ack' or 'downtime'
+    }
 
-Extra
-^^^^^
-.. code-block:: javascript
+Integration with Graylog
+------------------------
 
-    'level':    Log level
-    'facility': Log facility
-
-SNMP Traps
-----------
+The GELF connector will send, to Canopsis, events with the following informations :
 
 .. code-block:: javascript
 
-    'connector':  'snmp'
-    'event_type': 'trap'
+    {
+        'connector': 'gelf',
+        'event_type': 'log'
+    }
 
-Extra
-^^^^^
-.. code-block:: javascript
 
-    'snmp_severity':
-    'snmp_state':
-    'snmp_oid':
-    'address':
+Integration with Cucumber (EUE)
+-------------------------------
 
-Shinken
--------
+After defining the basic event structure, set the following fields as described :
 
 .. code-block:: javascript
 
-    'connector':  'shinken'
-    'event_type': 'check', 'ack', 'notification', 'downtime'
+    {
+        'event_type': 'eue',
+        'connector': 'cucumber',
+        'source_type': 'resource',
 
-Cucumber (EUE)
---------------
+        'connector_name':           // Name of the bot
+        'component':                // Name of the application
 
-.. code-block:: javascript
+        'media_bin':                // Base64 encoded binary content of associated media
+        'media_type':               // Media mime-type
+        'media_name':               // Media name
+    }
 
-    'connector': 'cucumber'
-    'component': name_of_the_application
-    'event_type': eue
-    'connector_name': name_of_the_bot
-    'source_type': resource
-
-For the eue stack, three types of messages will be published:
+For the EUE stack, three types of messages will be published:
 
 * Concerning the feature
 * Concerning the scenario
 * Concerning the step
 
-En fonction du type message le nom de la ressource sera:
+According to the message's type, the resource's name will be :
 
 * For the feature : ```'resource': feature_name```
 * For the scenario: ```'resource': feature_name.scenario_name.localization.OS.browser```
 * For the step :    ```'resource': feature_name.scenario_name.step_name.localization.OS.browser```
 
-Global
-^^^^^^
+Message Feature structure
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Add the following fields to your event :
 
 .. code-block:: javascript
 
-    'type_message' : ( feature, scenario, step)
+    {
+        'type_message': 'feature',
+        'description':              // Feature's description
+    }
 
-Pour la feature
-^^^^^^^^^^^^^^^
+Message Scenario structure
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: javascript
-
-    'description': global description (propre a la fonctionnalité)
-    'media_bin' : binary content of the file, encoded in base64
-    'media_type': mime type
-    'media_name': name of the media
-
-Pour le scenario
-^^^^^^^^^^^^^^^^
+Add the following fields to your event :
 
 .. code-block:: javascript
 
-    'child':               routing_key_feature
-    'cntxt_env' :          (prod / test)
-    'cntxt_os':            OS type
-    'cntxt_browser':       browser name,
-    'cntxt_localization':  localisation of the bot who plays the scenario
-    'media_bin':           binary content of the file, encoded in base64
-    'media_type':          mime type
-    'media_name':          name of the media
+    {
+        'type_message': 'scenario',
+        'child':                    // Routing Key of feature event
+        'cntxt_env':                // Environment identifier (prod, test, ...)
+        'cntxt_os':                 // Environment OS
+        'cntxt_browser':            // Browser type
+        'cntxt_localization':       // Bot's localization
+    }
 
-Pour la step
-^^^^^^^^^^^^
+Message Step structure
+^^^^^^^^^^^^^^^^^^^^^^
 
-.. code-block:: javascript
-
-    'child': 'routing_key_scenario'
-    'media_bin': binary content of the file, encoded in base64
-    'media_type': mime type
-    'media_name': media_name
-
-Calendar
---------
+Add the following fields to your event :
 
 .. code-block:: javascript
 
-    'event_type': 'calendar'
-    'connector':  Source name
-    'ressource':  event UID
-    'start':  event start timestamp
-    'end':  event end timestamp
-    'all_day' : (True/False)
-    'output' : event title
+    {
+        'type_message': 'step',
+        'child':                    // Routing Key of scenario event
+    }
+
+
+List of event types
+-------------------
+
++---------------+---------------------------------------------------------------------------+
+| calendar      | Used to send ICS events to Canopsis                                       |
++---------------+---------------------------------------------------------------------------+
+| check         | Used to send the result of a check (from Nagios, Icinga, Shinken, ...)    |
++---------------+---------------------------------------------------------------------------+
+| comment       | Used to send a comment                                                    |
++---------------+---------------------------------------------------------------------------+
+| consolidation | Sent by the consolidation engine                                          |
++---------------+---------------------------------------------------------------------------+
+| eue           | Used to send Cucumber informations                                        |
++---------------+---------------------------------------------------------------------------+
+| log           | Used to log informations                                                  |
++---------------+---------------------------------------------------------------------------+
+| perf          | Used to send perfdata only                                                |
++---------------+---------------------------------------------------------------------------+
+| selector      | Sent by the selector engine                                               |
++---------------+---------------------------------------------------------------------------+
+| sla           | Sent by the sla engine                                                    |
++---------------+---------------------------------------------------------------------------+
+| topology      | Sent by the topology engine                                               |
++---------------+---------------------------------------------------------------------------+
+| trap          | Used to send SNMP traps                                                   |
++---------------+---------------------------------------------------------------------------+
+| user          | Used by user to send informations                                         |
++---------------+---------------------------------------------------------------------------+
+| ack           | Used to acknowledge an alert                                              |
++---------------+---------------------------------------------------------------------------+
+| downtime      | Used to schedule a downtime                                               |
++---------------+---------------------------------------------------------------------------+
