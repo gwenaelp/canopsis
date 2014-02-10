@@ -1,13 +1,16 @@
- * ``/perfstore/values`` parameters
+ * **POST** ``/perfstore/values`` parameters
 
 .. code-block:: javascript
 
      {
-          'nodes': [{
-               'id':               // metric's node identifier
-               'from':             // Interval's beginning
-               'to':               // Interval's end
-          }],
+          'nodes': [
+               {
+                    'id':          // metric's node identifier
+                    'from':        // Interval's beginning
+                    'to':          // Interval's end
+               },
+               // ...
+          ],
 
           'consolidation_method': 'mean' or 'min' or 'max' or 'sum' or 'delta',
           'aggregate_method': 'first' or 'last' or 'mean' or 'min' or 'max' or 'sum' or 'delta',
