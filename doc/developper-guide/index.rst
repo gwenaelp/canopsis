@@ -11,3 +11,4 @@ Contents:
    entities
    rest-api
    create-your-own-widgets
+   packaging
