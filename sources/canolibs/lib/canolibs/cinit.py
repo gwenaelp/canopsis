@@ -19,8 +19,26 @@
 # ---------------------------------
 
 import signal, time
+import clogging
+import cconfiguration
+
 
 class cinit(object):
+
+	def __init__(self):
+		self.add_conf_handlers()
+
+	def add_conf_handlers(self):
+		
+		# Add handlers for clogging configuration files.
+		cconfiguration.register_observer(
+			clogging.LOGGING_CONFIGURATION_FILENAME,
+			clogging.loadConfigurationFile)
+
+		cconfiguration.register_observer(
+			clogging.PYTHON_LOGGING_CONFIGURATION_FILENAME,
+			clogging.loadPythonConfigurationFile)
+
 	class getHandler(object):
 		def __init__(self, logger):
 			self.logger = logger
