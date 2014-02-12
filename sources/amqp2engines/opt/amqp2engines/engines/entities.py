@@ -50,51 +50,60 @@ class engine(cengine):
 			mWarn = record.data['mWarn']
 
 		# Get event informations
+		connector = event['connector']
+		connector_name = event['connector_name']
 		component = event['component']
 		resource = event.get('resource', None)
 		hostgroups = event.get('hostgroups', [])
 		servicegroups = event.get('servicegroups', [])
 
-		# Create Component entity
+		# Create Connector entity
 		data = {
-			'type': 'component',
-			'name': component,
-			'hostgroups': hostgroups,
-			'mCrit': None,
-			'mWarn': None
+			'type': 'connector',
+			'connector': connector,
+			'name': connector_name
 		}
 
-		if event['source_type'] == 'component':
-			data['mCrit'] = event.get(mCrit, None)
-			data['mWarn'] = event.get(mWarn, None)
+		self.backend.update({
+			'type': 'connector',
+			'connector': connector,
+			'name': connector_name
+			},
+			{
+				'$set': data
+			},
+			upsert=True)
+
+		# Create Component entity
+		data.update({
+			'type': 'component',
+			'connector': connector,
+			'connector_name': connector_name,
+			'name': component,
+			'hostgroups': hostgroups,
+			'mCrit': event.get(mCrit, None),
+			'mWarn': event.get(mWarn, None)
+		}
+
+		type = 'component'
+		name = component
+
+		if event['source_type'] == 'resource':
+			type = 'resource'
+			name = resource
+			data.update({
+				'component': component,
+				'servicegroups': servicegroups
+				})
 
 		self.backend.update({
-				'type': 'component',
-				'name': component
+				'type': type,
+				'name': name
 			},{
 				'$set': data
 			},
 			upsert = True
 		)
-
-		# Create Resource entity
-		if resource:
-			self.backend.update({
-					'type': 'resource',
-					'name': resource
-				},{
-					'$set': {
-						'type': 'resource',
-						'name': resource,
-						'component': component,
-						'hostgroups': hostgroups,
-						'servicegroups': servicegroups,
-						'mCrit': event.get(mCrit, None),
-						'mWarn': event.get(mWarn, None)
-					}
-				},
-				upsert = True
-			)
 
 		# Create Hostgroups entities
 		for hostgroup in hostgroups:
@@ -134,6 +143,8 @@ class engine(cengine):
 				},{
 					'$set': {
 						'type': 'downtime',
+						'connector': connector,
+						'connector_name': connector_name,
 						'component': component,
 						'resource': resource,
 						'id': event['downtime_id'],
@@ -157,12 +168,16 @@ class engine(cengine):
 			self.backend.update({
 					'type': 'ack',
 					'timestamp': event['timestamp'],
+					'connector': connector,
+					'connector_name': connector_name,
 					'component': component,
 					'resource': resource,
 				},{
 					'$set': {
 						'type': 'ack',
 						'timestamp': event['timestamp'],
+						'connector': connector,
+						'connector_name': connector_name,
 						'component': component,
 						'resource': resource,
 
@@ -191,6 +206,8 @@ class engine(cengine):
 				},{
 					'$set': {
 						'type': 'metric',
+						'connector': connector,
+						'connector_name': connector_name,
 						'component': component,
 						'resource': resource,
 						'name': perfdata['metric'],
