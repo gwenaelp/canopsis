@@ -22,9 +22,9 @@ from cengine import cengine
 from cstorage import get_storage
 from caccount import caccount
 
-import time
+import time, json, logging, pprint, io, csv
 
-import logging
+import requests
 
 NAME="itop"
 
@@ -43,14 +43,20 @@ class engine(cengine):
 
 	def beat(self):
 		self.logger.debug('entered in selector BEAT')
-		csv = self.extract_csv('entities')
-		self.logger.debug("Csv generation complete")
-		self.logger.debug("\n\n%s" % (csv))
-		filename = '/tmp/itop_' + str(int(time.time()))
-		f = open(filename, 'w')
-		f.write(csv)
-		f.close()
-		self.triggerItopSync()
+		self.extract_csv('entities')
+
+		operation = {
+		   'operation'		: 'core/get',
+		   'class'			: 'CanopsisItem',
+		   'key'			: 'SELECT CRM',
+		   'output_fields'	: '*'
+		}
+
+		response = self.query_api('192.168.0.15', operation)
+		if response:
+			pp = pprint.PrettyPrinter(indent=2)
+			self.logger.debug(pp.pformat(response))
+
 
 	def triggerItopSync(self):
 		# TODO
@@ -59,30 +65,70 @@ class engine(cengine):
 
 	def extract_csv(self, extract_type):
 
+		filename = '/tmp/itop_metas.csv'
+
+		f = open(filename, 'w')
+		writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_ALL)
+
 		collection = self.storage.get_backend(extract_type)
 
-		extract_keys = {'entities': [u'component', u'connector_name']}[extract_type]
-		headers = {'entities': [u'primary_key', u'name', u'connector', u'org_id']}[extract_type]
+		extract_keys = {'entities': ['component','resource','connector_name','crecord_name', 'crecord_type']}[extract_type]
+		headers = ['primary_key'] + extract_keys[:] + ['org_id']
 
+		writer.writerow(headers)
 
-		csv = '"%s"\n' % ('";"'.join(headers))
 		count_pass = 0
 
-		#TODO remove limit
 		for document in collection.find({}, {key:1 for key in extract_keys}, limit=100):
+
 			line = ''
 			values = []
 			for key in extract_keys:
 				if key in document and document[key]:
-					values.append(document[key].replace('"',"\""))
-			else:
-				count_pass += 1
-
+					values.append(str(document[key]))
+				else:
+					self.logger.debug('missing > ' + key)
+					count_pass += 1
+					break
 			if len(values) == len(extract_keys):
-				line = '"%s_%s";"%s";"%s";"Demo"\n' % (values[0], values[1], values[0], values[1])
+				# Add primary key and org _id
+				values = ['%s_%s' % (document['component'], document['resource'])] + values + ['Demo']
+				writer.writerow(values)
+
+		self.logger.debug("was unable to serialize %s items" % (count_pass))
+		self.logger.info("written csv file %s" % (filename))
+
+		f.close()
 
 
-			csv += line
-		self.logger.debug("was unable to serialize %s events" % (count_pass))
+	def query_api(self, adress, operation):
 
-		return csv
+		url = 'http://%s/itop/webservices/rest.php?version=1.0' % (adress)
+
+		# Json query core stringified in HTTP call
+		try:
+			operation = json.dumps(operation)
+		except Exception, e:
+			self.logger.error('unable to parse itop API query')
+
+		# Document operation
+		query = {
+			'auth_pwd': 'admin',
+			'auth_user': 'admin',
+			'json_data' : operation
+		}
+
+		# effective HTTP query
+		headers = {'content-type':'application/json'}
+		r = requests.post(url, params=query, headers=headers)
+
+		response = None
+
+		try:
+			response = json.loads(r.text)
+			self.logger.info('Got itop API response will process response')
+		except Exception, e:
+			self.logger.error('unable to read itop API response %s' % (str(e)))
+
+		return response
+
