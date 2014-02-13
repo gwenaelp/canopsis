@@ -18,21 +18,33 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 # ---------------------------------
 
+import os.path
+import inspect
+import time
+from ConfigParser import RawConfigParser
+
+# PATH OF WATCHED DIRECTORY
+CONFIGURATION_DIRECTORY = os.path.expanduser('~/etc/')
+# GLOBAL CONFIGURATION FILE
+CONFIGURATION_FILE = 'configuration.conf'
+
 import pyinotify
 
 wm = pyinotify.WatchManager()  # Watch Manager
 mask = pyinotify.IN_MODIFY | pyinotify.IN_CREATE  # watched events
-wdd = wm.add_watch('/tmp', mask, rec=True)
+wdd = wm.add_watch(CONFIGURATION_DIRECTORY, mask, rec=True)
 
-import os.path
-from ConfigParser import RawConfigParser
+# KEYS FOR CONFIGURATION FILE
 
-CONFIGURATION_DIRECTORY = os.path.expanduser('~/etc/')
-CONFIGURATION_FILE = 'configuration.conf'
+# DEFAULT SECTION
+DEFAULT = 'DEFAULT'  # GLOBAL SECTION
+MANUAL_RECONFIGURATION = 'manual_reconfiguration'  # KEY FOR DEFINING MANUAL_RECONFIGURATION.
+LAST_RECONFIGURATION = 'last_reconfiguration'  # DATE OF LAST DEFAULT/LOCAL RECONFIGURATION.
+RECONFIGURE = 'reconfigure'  # FLAGS USED TO DO A DEFAULT/LOCAL RECONFIGURATION.
 
-MANUAL_RECONFIGURATION = 'manual_reconfiguration'
-
-GLOBAL = 'GLOBAL'
+# SPECIFIC TO SECTIONS
+FILE = 'file'  # CONFIGURATION FILES PATH
+LISTENER = 'listener'  # LISTENERS OF CONFIGURATION FILES. THE ORDER CORRESPONDS TO CONFIGURATION FILES ORDER
 
 import clogging
 _logger = clogging.getLogger()
@@ -66,13 +78,43 @@ class EventHandler(pyinotify.ProcessEvent):
         self.config_parser.read(src_path)
 
         manual_reconfiguration = \
-            self.config_parser.getboolean(GLOBAL, MANUAL_RECONFIGURATION)
-
-        if not manual_reconfiguration and self.manual_reconfiguration:
-            self.manual_reconfiguration = False
-            self.callObservers()
+            self.config_parser.getboolean(DEFAULT, MANUAL_RECONFIGURATION)
 
         self.manual_reconfiguration = manual_reconfiguration
+
+        files_to_reconfigure = list()
+
+        for section in self.config_parser.sections():
+            try:
+                listener = self.config_parser.get(section, LISTENER)
+                _file = self.config_parser.get(section, FILE)
+                _reconfigure = self.config_parser.has_option(section, RECONFIGURE)
+                function_listener = resolve_object(listener)
+                if inspect.isfunction(function_listener):
+                    self.register_observer(_file, function_listener, _reconfigure)
+                if _reconfigure:
+                    last_reconfiguration = time.ctime()
+                    self.config_parser.set(section, LAST_RECONFIGURATION, last_reconfiguration)
+                else:
+                    files_to_reconfigure.append(_file)
+            except Exception as e:
+                _logger.error(e)
+
+        reconfigure = self.config_parser.has_option(DEFAULT, RECONFIGURE)
+
+        if reconfigure:
+            if len(files_to_reconfigure) != 0:
+                for file_to_reconfigure in files_to_reconfigure:
+                    self.callObserver(file_to_reconfigure, True)
+            else:
+                self.callObservers()
+            self.config_parser.remove_option(DEFAULT, RECONFIGURE)
+            last_reconfiguration = time.ctime()
+            self.config_parser.set(DEFAULT, LAST_RECONFIGURATION, last_reconfiguration)
+
+        # save config_parser
+        with open(src_path, 'w') as fp:
+            self.config_parser.write(fp)
 
     def callObservers(self, call=False):
         """
@@ -205,3 +247,24 @@ if __name__ == '__main__':
             _event_handler.callObserver(src_path, True)
     else:
         _event_handler.callObservers(True)
+
+
+def resolve_object(namespace):
+    """
+    Try to get an object reference from a namespace.
+    Raise an ImportError if namespace is not known from this environment.
+    """
+
+    result = None
+    _globals = globals()
+
+    if namespace not in _globals:
+        splitted_namespace = namespace.split('.')
+        result = __import__(splitted_namespace[0])
+        for intermediate_namespace in splitted_namespace[1:]:
+            try:
+                result = getattr(result, intermediate_namespace)
+            except AttributeError as AE:
+                raise ImportError(AE)
+
+    return result
