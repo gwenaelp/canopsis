@@ -29,12 +29,13 @@ class CconfigurationTest(unittest.TestCase):
 
         self.assertFalse(self.has_been_updated)
 
-        os.remove(TEST_FILE_PATH)
+        if os.path.exists(TEST_FILE_PATH):
+            os.remove(TEST_FILE_PATH)
 
         with open(TEST_FILE_PATH, 'w') as test_file:
             test_file.write('test')
 
-        time.sleep(1)
+        #time.sleep(.5)
 
         self.assertTrue(self.has_been_updated)
 

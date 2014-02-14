@@ -171,6 +171,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
         self.callObserver(event.pathname)
 
+
 # singleton for configuration file system event handler
 _event_handler = EventHandler()
 
@@ -178,7 +179,7 @@ _notifier = None
 
 
 def schedule_observer():
-    _notifier = pyinotify.ThreadedNotifier(wm, EventHandler())
+    _notifier = pyinotify.ThreadedNotifier(wm, _event_handler)
     _notifier.start()
 
 #import threading
@@ -186,6 +187,7 @@ def schedule_observer():
 #t.start()
 
 schedule_observer()
+time.sleep(0.05)
 
 import atexit
 
@@ -201,7 +203,6 @@ def _stop_observer():
 
     if _notifier is not None:
         _notifier.stop()
-        _notifier.join()
 
 
 def register_observer(configuration_file, observer, call=False):
@@ -234,20 +235,6 @@ def manual_reconfiguration(manual_reconfiguration=None):
 
     return _event_handler.manual_reconfiguration
 
-if __name__ == '__main__':
-    """
-    Script execution.
-    """
-
-    import sys
-
-    if len(sys.argv) > 1:
-        for conf_file in sys.argv[1:]:
-            src_path = os.path.join(CONFIGURATION_DIRECTORY, conf_file)
-            _event_handler.callObserver(src_path, True)
-    else:
-        _event_handler.callObservers(True)
-
 
 def resolve_object(namespace):
     """
@@ -268,3 +255,17 @@ def resolve_object(namespace):
                 raise ImportError(AE)
 
     return result
+
+if __name__ == '__main__':
+    """
+    Script execution.
+    """
+
+    import sys
+
+    if len(sys.argv) > 1:
+        for conf_file in sys.argv[1:]:
+            src_path = os.path.join(CONFIGURATION_DIRECTORY, conf_file)
+            _event_handler.callObserver(src_path, True)
+    else:
+        _event_handler.callObservers(True)
