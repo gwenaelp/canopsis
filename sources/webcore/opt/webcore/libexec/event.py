@@ -34,7 +34,7 @@ import cevent
 #import protection function
 from libexec.auth import get_account, check_group_rights
 
-logger = logging.getLogger('Event')
+logger = logging.getLogger()
 
 amqp = None
 group_managing_access = 'group.CPS_event_admin'
@@ -44,7 +44,7 @@ group_managing_access = 'group.CPS_event_admin'
 ## load functions
 def load():
 	global amqp
-	amqp = camqp(logging_name="Event-amqp")
+	amqp = camqp()
 	amqp.start()	
 	
 def unload():
@@ -77,7 +77,9 @@ def send_event(	routing_key=None):
 	timestamp = None
 	display_name = None
 	tags = None
-				
+	ticket = None
+	ref_rk = None
+
 	#--------------------explode routing key----------
 	if routing_key :
 		logger.debug('The routing key is : %s' % str(routing_key))
@@ -187,7 +189,13 @@ def send_event(	routing_key=None):
 
 		if not isinstance(perf_data_array, list):
 			perf_data_array = []
-		
+	
+	if not ticket:
+		ticket = data.get('ticket', None )
+	
+	if not ref_rk:
+		ref_rk = data.get('ref_rk', None )
+
 	#------------------------------forging event----------------------------------
 
 	event = cevent.forger(
@@ -205,7 +213,9 @@ def send_event(	routing_key=None):
 				perf_data_array = perf_data_array,
 				timestamp = timestamp,
 				display_name = display_name,
-				tags = tags
+				tags = tags,
+				ticket = ticket,
+				ref_rk = ref_rk
 			)
 	
 	logger.debug(type(perf_data_array))

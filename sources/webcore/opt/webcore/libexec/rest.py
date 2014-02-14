@@ -34,7 +34,13 @@ from ctools import clean_mfilter
 #import protection function
 from libexec.auth import get_account ,check_group_rights
 
-logger = logging.getLogger("rest")
+logger = logging.getLogger()
+
+# dirty hack for now
+try:
+	from ha import *
+except:
+	logger.debug('unable to load ha module')
 
 ctype_to_group_access = {
 							'schedule' : 'group.CPS_schedule_admin',
@@ -47,7 +53,6 @@ ctype_to_group_access = {
 						}
 
 #########################################################################
-
 #### GET Media
 @get('/rest/media/:namespace/:_id')
 def rest_get_media(namespace, _id):
@@ -80,25 +85,92 @@ def rest_get_media(namespace, _id):
 
 	return base64.b64decode(media_bin)
 
+@get('/rest/events_trees/:rk')
+@get('/rest/events_trees')
+def rest_trees_get(rk=None):
+	"""
+		REST API Handler to get events trees.
+	"""
+
+	account = get_account()
+	storage = get_storage(namespace='events_trees', account=account)
+
+
+	if not rk:
+		logger.debug('Getting whole collection.')
+
+		records = storage.find()
+
+		return {
+			'total': len(records),
+			'success': True,
+			'data': [r.dump() for r in records]
+		}
+
+	else:
+		logger.debug("Getting tree matching rk '{0}'".format(rk))
+
+	
+		# Get Routing Key components
+		rkcomps = rk.split('.')
+
+		# Fetch root tree
+		record = storage.find_one(mfilter={'rk': rkcomps[0]})
+
+		if not record:
+			logger.error('No matching root node for rk {0}'.format(rk))
+			return HTTPError(404, "There is no events tree matching the routing key")
+
+		# Now go to the matching node
+		tree = record.dump(json=True)
+
+		if rk == tree['rk']:
+			return {
+				'total': 1,
+				'success': True,
+				'data': tree
+			}
+
+		current_node = tree
+		current_rk = rkcomps[0]
+
+		for rkcomp in rkcomps[1:]:
+			current_rk = '{0}.{1}'.format(current_rk, rkcomp)
+
+			# Find the node in the children list
+			for child in current_node['child_nodes']:
+				if child['rk'] == current_rk:
+					current_node = child
+					break
+
+			# If not found, raise an error
+			else:
+				logger.error('No matching node for rk {0}'.format(rk))
+				return HTTPError(404, "There is no events tree matching the routing key")
+
+		# Return the sub-tree
+		return {
+			'total': 1,
+			'success': True,
+			'data': current_node
+		}
+
 #### GET
-@get('/rest/:namespace/:ctype/:_id')
-@get('/rest/:namespace/:ctype')
-@get('/rest/:namespace')
-def rest_get(namespace, ctype=None, _id=None):
+def rest_get(namespace, ctype=None, _id=None, params=None):
 	#get the session (security)
 	account = get_account()
 
-	limit		= int(request.params.get('limit', default=20))
-	page		= int(request.params.get('page', default=0))
-	start		= int(request.params.get('start', default=0))
-	groups		= request.params.get('groups', default=None)
-	search		= request.params.get('search', default=None)
-	filter		= request.params.get('filter', default=None)
-	sort		= request.params.get('sort', default=None)
-	query		= request.params.get('query', default=None)
-	onlyWritable	= request.params.get('onlyWritable', default=False)
-	noInternal	= request.params.get('noInternal', default=False)
-	ids			= request.params.get('ids', default=[])
+	limit		= int(params.get('limit', default=20))
+	page		= int(params.get('page', default=0))
+	start		= int(params.get('start', default=0))
+	groups		= params.get('groups', default=None)
+	search		= params.get('search', default=None)
+	filter		= params.get('filter', default=None)
+	sort		= params.get('sort', default=None)
+	query		= params.get('query', default=None)
+	onlyWritable	= params.get('onlyWritable', default=False)
+	noInternal	= params.get('noInternal', default=False)
+	ids			= params.get('ids', default=[])
 
 	get_id			= request.params.get('_id', default=None)
 
@@ -156,10 +228,8 @@ def rest_get(namespace, ctype=None, _id=None):
 
 	mfilter = {}
 	if isinstance(filter, list):
-		if len(filter) > 0:
-			mfilter = filter[0]
-		else:
-			logger.error(" + Invalid filter format")
+		for item in filter:
+			mfilter[item['property']] = item['value']
 
 	elif isinstance(filter, dict):
 		mfilter = filter
@@ -245,6 +315,12 @@ def rest_get(namespace, ctype=None, _id=None):
 	output={'total': total, 'success': True, 'data': output}
 
 	return output
+
+@get('/rest/:namespace/:ctype/:_id')
+@get('/rest/:namespace/:ctype')
+@get('/rest/:namespace')
+def rest_get_route(namespace, ctype=None, _id=None):
+	return rest_get(namespace, ctype, _id, request.params)
 
 #### POST
 @post('/rest/:namespace/:ctype/:_id')
