@@ -1,3 +1,4 @@
+//need:widgets/eventcalendar/calendar_ajax_handler.js,app/lib/view/cwebsocketWidget.js
 /*
 #--------------------------------
 # Copyright (c) 2011 "Capensis" [http://www.capensis.com]
@@ -98,6 +99,14 @@ Ext.define('widgets.eventcalendar.eventcalendar' , {
 		$('#' + calendarRoot.wcontainer.id).fullCalendar({
 			firstDay:1,
 			height: calendarRoot.wcontainer.height,
+			// eventSources: eventSources,
+			events: function(start, end, callback){
+				var events = [];
+				var start_unixTimestamp = new Date(start).getTime() / 1000;
+				var end_unixTimestamp = new Date(end).getTime() / 1000;
+				// events = events.concat(calendarRoot.getCalendarEvents(start_unixTimestamp, end_unixTimestamp, callback));
+				calendarRoot.ajaxHandler.getStackedEvents(start_unixTimestamp, end_unixTimestamp, callback);
+			},
 			defaultView: this.defaultView,
 			weekends : this.show_weekends,
 			header: {
@@ -108,13 +117,6 @@ Ext.define('widgets.eventcalendar.eventcalendar' , {
 			selectable: calendarRoot.editable,
 			selectHelper: calendarRoot.editable,
 			editable: calendarRoot.editable,
-			events: function(start, end, callback){
-				var events = [];
-				var start_unixTimestamp = new Date(start).getTime() / 1000;
-				var end_unixTimestamp = new Date(end).getTime() / 1000;
-
-				calendarRoot.ajaxHandler.getEvents(start_unixTimestamp, end_unixTimestamp, callback);
-			},
 			select: function(start, end, allDay) {
 				calendarRoot.editwindow.showNewEvent(start, end, allDay);
 			},
@@ -128,15 +130,11 @@ Ext.define('widgets.eventcalendar.eventcalendar' , {
 				calendarRoot.send_events([calEvent]);
 			},
 			eventClick: function(calEvent, jsEvent, view) {
-				log.debug('eventClick');
-				log.dump(calEvent);
-				log.dump(jsEvent);
-
-				if(calEvent.type && calEvent.type === "stacked")
+				if(calEvent.type && calEvent.type === "non-calendar")
 				{
 					calendarRoot.eventswindow.showEvents(calEvent, calendarRoot.tags);
 				}
-				else if(calEvent.type && calEvent.type === "calendar")
+				else
 				{
 					if(calendarRoot.editable)
 					{
@@ -154,13 +152,10 @@ Ext.define('widgets.eventcalendar.eventcalendar' , {
 					calendarRoot.sources_byComponent[currentSource.component] = currentSource;
 				};
 
-				if(event.type === "stacked")
+				if(event.type === "non-calendar")
 				{
-					element.css({"background-color" : calendarRoot.stackedEventColor, "border-color" : calendarRoot.stackedEventColor});
-				}
-				else if(event.type === "downtime")
-				{
-					element.css({"background-color" : calendarRoot.downtimeEventColor, "border-color" : calendarRoot.downtimeEventColor});
+					log.debug('no component (ics source) for event, assuming the event is stacked regular events', calendarRoot.logAuthor);
+					element.css({"background-color" : calendarRoot.defaultEventColor, "border-color" : calendarRoot.defaultEventColor});
 				}
 				else
 				{
@@ -181,6 +176,7 @@ Ext.define('widgets.eventcalendar.eventcalendar' , {
 			},
 
 		});
+
 		$('#' + calendarRoot.wcontainer.id).addClass(calendarRoot.event_display_size);
 
 		this.subscribe();

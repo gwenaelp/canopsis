@@ -237,7 +237,7 @@
 										}
 				}]
 	},{
-		"title": "Stashed events",
+		"title": "Stacked events",
 		"items" : [{
 					"xtype": "cfilter",
 					"name" : "stacked_events_filter"
