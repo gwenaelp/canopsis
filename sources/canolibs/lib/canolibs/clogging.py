@@ -18,13 +18,16 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 # ---------------------------------
 
+import ConfigParser
+import inspect
+import logging
+import os
+import sys
+
 # file for canopsis logging configuration file
 LOGGING_CONFIGURATION_FILENAME = 'logging.conf'
 # file for python logging configuration file
 PYTHON_LOGGING_CONFIGURATION_FILENAME = 'python-logging.conf'
-
-
-import os.path
 
 LOG_DIRECTORY = os.path.expanduser('~/var/log/')
 
@@ -36,18 +39,18 @@ DEBUG_FORMAT = "%(asctime)s [%(name)s] [%(levelname)s] [path: %(pathname)s]\
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
-import logging
-
 INFO_FORMATTER = logging.Formatter(fmt=INFO_FORMAT, datefmt=DATE_FORMAT)
 DEBUG_FORMATTER = logging.Formatter(fmt=DEBUG_FORMAT, datefmt=DATE_FORMAT)
 
-import sys
 if hasattr(sys, 'frozen'):  # support for py2exe
-    _srcfile = "logging%s__init__%s" % (os.sep, __file__[-4:])
+    _srcfile = "logging{0}__init__{1}".format(os.sep, __file__[-4:])
+
 elif str.lower(__file__[-4:]) in ['.pyc', '.pyo']:
     _srcfile = __file__[:-4] + '.py'
+
 else:
     _srcfile = __file__
+
 _srcfile = os.path.normcase(_srcfile)
 
 
@@ -57,7 +60,7 @@ class CanopsisLogger(logging.Logger):
     """
 
     # static namespace for global scope information
-    __SCOPE__ = '__SCOPE__'
+    __SCOPE__ = None
 
     def __init__(self, name, level=logging.INFO):
         """
@@ -74,6 +77,12 @@ class CanopsisLogger(logging.Logger):
         Change scope, i.e. file handler target.
         """
 
+        # update scope if necessary
+        if scope is None:
+            if CanopsisLogger.__SCOPE__ is None:
+                CanopsisLogger.__SCOPE__ = self.name
+            scope = CanopsisLogger.__SCOPE__
+
         path = self.getLogPath(scope)
 
         # create log file if not exists
@@ -87,14 +96,17 @@ class CanopsisLogger(logging.Logger):
 
     def getLogPath(self, scope=None):
         """
-        Get log file path corresponding to its name.
+        Get log file path corresponding to the scope.
         """
 
-        if scope is None:
-            scope = globals().get(CanopsisLogger.__SCOPE__, self.name)
+        result = scope
 
-        filename = scope.replace('.', os.path.sep) + '.log'
-        result = os.path.join(LOG_DIRECTORY, filename)
+        if result is None:
+            result = CanopsisLogger.__SCOPE__
+
+        if result is not None:
+            filename = scope.replace('.', os.path.sep) + '.log'
+            result = os.path.join(LOG_DIRECTORY, filename)
 
         return result
 
@@ -143,10 +155,12 @@ class CanopsisLogger(logging.Logger):
         while hasattr(f, "f_code"):
             co = f.f_code
             filename = os.path.normcase(co.co_filename)
+
             # This line is modified.
             if filename in (_srcfile, logging._srcfile):
                 f = f.f_back
                 continue
+
             rv = (filename, f.f_lineno, co.co_name)
             break
 
@@ -160,15 +174,15 @@ class CanopsisLogger(logging.Logger):
         if handler is None:
             if self.handler is not None:
                 self.removeHandler(self.handler)
+
             handler = self.handler
+
         else:
             self.handler = None
 
         super(CanopsisLogger, self).addHandler(handler)
 
 logging.setLoggerClass(CanopsisLogger)
-
-import inspect
 
 
 def getLogger(name=None, scope=None):
@@ -182,18 +196,21 @@ def getLogger(name=None, scope=None):
         f_back = inspect.currentframe().f_back
         # get previous frame module name
         name = f_back.f_globals['__name__']
+
         if name == '__main__':
             # get filename in case of main process
-            name = f_back.f_code.co_filename
+            filename = f_back.f_code.co_filename
+            name = os.path.basename(filename)
+
             if name.endswith('.py'):
                 name = name[:-3]
+
             elif name.endswith('.pyc'):
                 name = name[:-4]
 
     result = logging.getLogger(name)
 
-    if scope is not None:
-        result.setScope(scope)
+    result.setScope(scope)
 
     return result
 
@@ -201,7 +218,7 @@ def getLogger(name=None, scope=None):
 _logger = getLogger()
 
 
-def getChildLogger(name=None):
+def getChildLogger(name=None, scope=None):
     """
     Get a child logger related to previous frame.
     """
@@ -209,20 +226,25 @@ def getChildLogger(name=None):
     f_back = inspect.currentframe().f_back
     # get previous frame module name
     parent = f_back.f_back.f_globals['__name__']
+
     if parent == '__main__':
         # get filename in case of main process
-        parent = f_back.f_back.f_code.co_filename
+        filename = f_back.f_back.f_code.co_filename
+        parent = os.path.basename(filename)
+
         if parent.endswith('.py'):
             parent = parent[:-3]
+
         elif parent.endswith('.pyc'):
             parent = parent[:-4]
 
     if name is not None:
         name = "{0}.{1}".format(parent, name)
+
     else:
         name = parent
 
-    result = logging.getLogger(name)
+    result = getLogger(name, scope)
 
     return result
 
@@ -233,12 +255,12 @@ def getRootLogger():
     """
 
     result = logging.getLogger()
+
     return result
 
 # bind observers to both configuration files
 
 # register file configuration changes into the global configuration file
-import ConfigParser
 LEVEL = 'level'
 
 
@@ -265,8 +287,6 @@ def loadConfigurationFile(src_path):
                 level = int(level)
 
             logger.setLevel(level)
-
-import logging.config
 
 
 def loadPythonConfigurationFile(src_path):
