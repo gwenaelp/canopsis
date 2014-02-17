@@ -259,6 +259,16 @@ Ext.define('canopsis.lib.form.field.ccomponentlist' , {
 						}
 					};
 				}
+				if(this.additional_field.name === 'color') {
+					editor_config.renderer = function(val) {
+						if(!val) {
+							return Ext.String.format('<span style="color:grey">{0}</span>', this.emptyText);
+						}
+						else {
+							return Ext.String.format('<span style="background-color:{0}; color: white; display:block">{0}</span>', val);
+						}
+					};
+				}
 
 				selection_grid_config.columns.push(editor_config);
 				selection_grid_config.flex = 2;
