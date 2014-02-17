@@ -219,7 +219,8 @@ def getLogger(name=None, scope=None):
 # instantiate a logger
 _logger = getLogger()
 # Cancel default clogging scope
-CanopsisLogger.__SCOPE__ = None
+if CanopsisLogger.__SCOPE__ == 'clogging':
+    CanopsisLogger.__SCOPE__ = None
 
 
 def getChildLogger(name=None, scope=None):
