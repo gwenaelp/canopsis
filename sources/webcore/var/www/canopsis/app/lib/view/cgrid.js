@@ -79,6 +79,8 @@ Ext.define('canopsis.lib.view.cgrid' , {
 
 	exportMode: false,
 
+	loadStoreAtInit: true,
+
 	bar_search: [],
 	opt_bar_customs: [],
 	menu_items: [],
@@ -469,7 +471,7 @@ Ext.define('canopsis.lib.view.cgrid' , {
 		if(this.store && this.store.proxy.url) {
 			log.debug("Store Loaded: " + this.store.loaded, this.logAuthor);
 
-			if(!this.store.loaded && !this.store.autoLoad) {
+			if(!this.store.loaded && !this.store.autoLoad && this.loadStoreAtInit) {
 				this.store.load();
 			}
 		}

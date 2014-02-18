@@ -57,6 +57,7 @@ Ext.define('widgets.eventcalendar.eventswindow' , {
 			exportMode: this.exportMode,
 			opt_paging: this.paging,
 			filter: this.filter,
+			loadStoreAtInit: false,
 			pageSize: this.pageSize,
 			remoteSort: true,
 			height:490,
