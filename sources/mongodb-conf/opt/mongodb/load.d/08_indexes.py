@@ -29,6 +29,16 @@ storage = get_storage(account=root, namespace='object')
 
 
 def init():
+    logger.info(" + Create index of 'entities'")
+    storage.get_backend('entities').ensure_index([
+        ('type', 1),
+        ('connector', 1),
+        ('connector_name', 1),
+        ('component', 1),
+        ('resource', 1),
+        ('name', 1)
+    ])
+
     logger.info(" + Create index of 'perfdata2'")
     storage.get_backend('perfdata2').ensure_index([
         ('co', 1),
@@ -104,6 +114,7 @@ def init():
     storage.get_backend('events_log').ensure_index([
         ('timestamp', 1)
     ])
+
 
 def update():
     init()
