@@ -18,26 +18,22 @@
 # along with Canopsis.  If not, see <http://www.gnu.org/licenses/>.
 # ---------------------------------
 
-import signal, time
-import clogging
-import cconfiguration
 
+import signal, time, clogging
 
 class cinit(object):
+	"""
+	Class to use in any canopsis process.
+	"""
 
-	def __init__(self):
-		self.add_conf_handlers()
+	def getLogger(self, scope=None):
+		"""
+		Get a logger with specific scope.
+		"""
 
-	def add_conf_handlers(self):
-		
-		# Add handlers for clogging configuration files.
-		cconfiguration.register_observer(
-			clogging.LOGGING_CONFIGURATION_FILENAME,
-			clogging.loadConfigurationFile)
+		result = clogging.getChildLogger(scope=scope)
 
-		cconfiguration.register_observer(
-			clogging.PYTHON_LOGGING_CONFIGURATION_FILENAME,
-			clogging.loadPythonConfigurationFile)
+		return result
 
 	class getHandler(object):
 		def __init__(self, logger):

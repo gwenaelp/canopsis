@@ -43,224 +43,214 @@ INFO_FORMATTER = logging.Formatter(fmt=INFO_FORMAT, datefmt=DATE_FORMAT)
 DEBUG_FORMATTER = logging.Formatter(fmt=DEBUG_FORMAT, datefmt=DATE_FORMAT)
 
 if hasattr(sys, 'frozen'):  # support for py2exe
-    _srcfile = "logging{0}__init__{1}".format(os.sep, __file__[-4:])
+	_srcfile = "logging{0}__init__{1}".format(os.sep, __file__[-4:])
 
 elif str.lower(__file__[-4:]) in ['.pyc', '.pyo']:
-    _srcfile = __file__[:-4] + '.py'
+	_srcfile = __file__[:-4] + '.py'
 
 else:
-    _srcfile = __file__
+	_srcfile = __file__
 
 _srcfile = os.path.normcase(_srcfile)
 
 
 class CanopsisLogger(logging.Logger):
-    """
-    Logger dedicated to Canopsis files.
-    """
+	"""
+	Logger dedicated to Canopsis files.
+	"""
 
-    # static namespace for global scope information
-    __SCOPE__ = None
+	# static namespace for global scope information
+	__SCOPE__ = None
 
-    def __init__(self, name, level=logging.INFO):
-        """
-        Create a default file handler where filename corresponds to input name.
-        Name tree is preserved in log file tree.
-        """
+	def __init__(self, name, level=logging.INFO):
+		"""
+		Create a default file handler where filename corresponds to input name.
+		Name tree is preserved in log file tree.
+		"""
 
-        super(CanopsisLogger, self).__init__(name, level)
+		super(CanopsisLogger, self).__init__(name, level)
+		self.handler = None
 
-        self.setScope()
+		self.setScope()
 
-    def setScope(self, scope=None):
-        """
-        Change scope, i.e. file handler target.
-        """
+	def setScope(self, scope=None):
+		"""
+		Change scope, i.e. file handler target.
+		"""
 
-        # update scope if necessary
-        if scope is None:
-            if CanopsisLogger.__SCOPE__ is None:
-                CanopsisLogger.__SCOPE__ = self.name
+		# update scope if necessary
+		if scope is None:
+			if CanopsisLogger.__SCOPE__ is None:
+				CanopsisLogger.__SCOPE__ = self.name
 
-            scope = CanopsisLogger.__SCOPE__
 
-        path = self.getLogPath(scope)
+			scope = CanopsisLogger.__SCOPE__
+		else:
+			CanopsisLogger.__SCOPE__ = scope
 
-        # create log file if not exists
-        if not os.path.exists(path):
-            directory = os.path.dirname(path)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
+		path = self.getLogPath(scope)
 
-        self.handler = logging.FileHandler(path, 'a')
-        self.handler.setLevel(self.level)
-        self.addHandler()
+		# create log file if not exists
+		if not os.path.exists(path):
+			directory = os.path.dirname(path)
+			if not os.path.exists(directory):
+				os.makedirs(directory)
 
-    def getLogPath(self, scope=None):
-        """
-        Get log file path corresponding to the scope.
-        """
+		if self.handler is not None:
+			self.removeHandler(self.handler)
 
-        result = scope
+		self.handler = logging.FileHandler(path, 'a+')
+		self.handler.setLevel(logging.DEBUG)
+		self.addHandler(self.handler)
 
-        if result is None:
-            result = CanopsisLogger.__SCOPE__
+	def getLogPath(self, scope=None):
+		"""
+		Get log file path corresponding to the scope.
+		"""
 
-        if result is not None:
-            filename = scope.replace('.', os.path.sep) + '.log'
-            result = os.path.join(LOG_DIRECTORY, filename)
+		result = scope
 
-        return result
+		if result is None:
+			result = CanopsisLogger.__SCOPE__
 
-    def debug(self, msg, *args, **kwargs):
-        self.log(logging.DEBUG, msg, *args, **kwargs)
+		if result is not None:
+			filename = scope.replace('.', os.path.sep) + '.log'
+			result = os.path.join(LOG_DIRECTORY, filename)
 
-    def info(self, msg, *args, **kwargs):
-        self.log(logging.INFO, msg, *args, **kwargs)
+		return result
 
-    def warning(self, msg, *args, **kwargs):
-        self.log(logging.WARNING, msg, *args, **kwargs)
+	def debug(self, msg, *args, **kwargs):
+		self.log(logging.DEBUG, msg, *args, **kwargs)
 
-    def critical(self, msg, *args, **kwargs):
-        self.log(logging.CRITICAL, msg, *args, **kwargs)
+	def info(self, msg, *args, **kwargs):
+		self.log(logging.INFO, msg, *args, **kwargs)
 
-    def error(self, msg, *args, **kwargs):
-        self.log(logging.ERROR, msg, *args, **kwargs)
+	def warning(self, msg, *args, **kwargs):
+		self.log(logging.WARNING, msg, *args, **kwargs)
 
-    def log(self, level, msg, *args, **kwargs):
-        """
-        Change dynamically of formatter if no new handler has been requested.
-        """
+	def critical(self, msg, *args, **kwargs):
+		self.log(logging.CRITICAL, msg, *args, **kwargs)
 
-        if self.handler is not None:
-            if self.isEnabledFor(level):
-                if level <= logging.DEBUG:
-                    self.handler.setFormatter(DEBUG_FORMATTER)
-                else:
-                    self.handler.setFormatter(INFO_FORMATTER)
+	def error(self, msg, *args, **kwargs):
+		self.log(logging.ERROR, msg, *args, **kwargs)
 
-        super(CanopsisLogger, self).log(level, msg, *args, **kwargs)
+	def log(self, level, msg, *args, **kwargs):
+		"""
+		Change dynamically of formatter if no new handler has been requested.
+		"""
 
-        # log debug message for this
-        if self is not _logger:
-            _logger.debug('log:%s, level: %s, msg: %s', self.name, level, msg)
+		if self.handler is not None:
+			if self.isEnabledFor(level):
+				if level <= logging.DEBUG:
+					self.handler.setFormatter(DEBUG_FORMATTER)
+				else:
+					self.handler.setFormatter(INFO_FORMATTER)
 
-    def findCaller(self):
-        """
-        Find the stack frame of the caller so that we can note the source
-        file name, line number and function name.
-        """
+		super(CanopsisLogger, self).log(level, msg, *args, **kwargs)
 
-        f = logging.currentframe().f_back
-        rv = "(unknown file)", 0, "(unknown function)"
+		# log debug message for this
+		if self is not _logger:
+			_logger.debug('log: %s, level: %s, msg: %s', self.name, level, msg)
 
-        while hasattr(f, "f_code"):
-            co = f.f_code
-            filename = os.path.normcase(co.co_filename)
+	def findCaller(self):
+		"""
+		Find the stack frame of the caller so that we can note the source
+		file name, line number and function name.
+		"""
 
-            # This line is modified.
-            if filename in (_srcfile, logging._srcfile):
-                f = f.f_back
-                continue
+		f = logging.currentframe().f_back
+		rv = "(unknown file)", 0, "(unknown function)"
 
-            rv = (filename, f.f_lineno, co.co_name)
-            break
+		while hasattr(f, "f_code"):
+			co = f.f_code
+			filename = os.path.normcase(co.co_filename)
 
-        return rv
+			# This line is modified.
+			if filename in (_srcfile, logging._srcfile):
+				f = f.f_back
+				continue
 
-    def addHandler(self, handler=None):
-        """
-        Check if the call has been done during self initialization.
-        """
+			rv = (filename, f.f_lineno, co.co_name)
+			break
 
-        if handler is None:
-            if self.handler is not None:
-                self.removeHandler(self.handler)
-
-            handler = self.handler
-
-        else:
-            self.handler = None
-
-        super(CanopsisLogger, self).addHandler(handler)
+		return rv
 
 logging.setLoggerClass(CanopsisLogger)
 
 
 def getLogger(name=None, scope=None):
-    """
-    Get a logger in a Canopsis environment.
-    - name: name of new logger. If None, iname is callee module.
-    - scope: output scope identity. If None, use the last defined.
-    """
+	"""
+	Get a logger in a Canopsis environment.
+	- name: name of new logger. If None, iname is callee module.
+	- scope: output scope identity. If None, use the last defined.
+	"""
 
-    if name is None:
-        f_back = inspect.currentframe().f_back
-        # get previous frame module name
-        name = f_back.f_globals['__name__']
+	if name is None:
+		f_back = inspect.currentframe().f_back
+		# get previous frame module name
+		name = f_back.f_globals['__name__']
 
-        if name == '__main__':
-            # get filename in case of main process
-            filename = f_back.f_code.co_filename
-            name = os.path.basename(filename)
+		if name == '__main__':
+			# get filename in case of main process
+			filename = f_back.f_code.co_filename
+			name = os.path.basename(filename)
 
-            if name.endswith('.py'):
-                name = name[:-3]
+			if name.endswith('.py'):
+				name = name[:-3]
 
-            elif name.endswith('.pyc'):
-                name = name[:-4]
+			elif name.endswith('.pyc'):
+				name = name[:-4]
 
-    result = logging.getLogger(name=name)
+	result = logging.getLogger(name=name)
 
-    result.setScope(scope)
+	result.setScope(scope)
 
-    return result
+	return result
 
 # instantiate a logger
 _logger = getLogger()
 # Cancel default clogging scope
-if CanopsisLogger.__SCOPE__ == 'clogging':
-    CanopsisLogger.__SCOPE__ = None
+CanopsisLogger.__SCOPE__ = None
 
 
 def getChildLogger(name=None, scope=None):
-    """
-    Get a child logger related to previous frame.
-    """
+	"""
+	Get a child logger related to previous frame.
+	"""
 
-    f_back = inspect.currentframe().f_back.f_back
-    # get previous frame module name
-    parent = f_back.f_globals['__name__']
+	f_back = inspect.currentframe().f_back.f_back
+	# get previous frame module name
+	parent = f_back.f_globals['__name__']
 
-    if parent == '__main__':
-        # get filename in case of main process
-        filename = f_back.f_code.co_filename
-        parent = os.path.basename(filename)
+	if parent == '__main__':
+		# get filename in case of main process
+		filename = f_back.f_code.co_filename
+		parent = os.path.basename(filename)
 
-        if parent.endswith('.py'):
-            parent = parent[:-3]
+		if parent.endswith('.py'):
+			parent = parent[:-3]
 
-        elif parent.endswith('.pyc'):
-            parent = parent[:-4]
+		elif parent.endswith('.pyc'):
+			parent = parent[:-4]
 
-    if name is not None:
-        name = "{0}.{1}".format(parent, name)
-    else:
-        name = parent
+	if name is not None:
+		name = "{0}.{1}".format(parent, name)
+	else:
+		name = parent
 
-    result = getLogger(name=name, scope=scope)
+	result = getLogger(name=name, scope=scope)
 
-    return result
+	return result
 
 
 def getRootLogger():
-    """
-    Get Root logger.
-    """
+	"""
+	Get Root logger.
+	"""
 
-    result = logging.getLogger()
+	result = logging.getLogger()
 
-    return result
+	return result
 
 # bind observers to both configuration files
 
@@ -269,35 +259,35 @@ LEVEL = 'level'
 
 
 def loadConfigurationFile(src_path):
-    """
-    Reuse simple configuration file in order to parameterize loggers.
+	"""
+	Reuse simple configuration file in order to parameterize loggers.
 
-    Sections are logger names, and options are:
-    - level: level_value or level_name.
-    """
+	Sections are logger names, and options are:
+	- level: level_value or level_name.
+	"""
 
-    _logger.debug('src_path: %s', src_path)
+	_logger.debug('src_path: %s', src_path)
 
-    config_parser = ConfigParser.RawConfigParser()
-    config_parser.read(src_path)
+	config_parser = ConfigParser.RawConfigParser()
+	config_parser.read(src_path)
 
-    for section in config_parser.sections():
-        logger = logging.getLogger(section)
+	for section in config_parser.sections():
+		logger = logging.getLogger(section)
 
-        if config_parser.has_option(section, LEVEL):
-            level = config_parser.get(section, LEVEL)
+		if config_parser.has_option(section, LEVEL):
+			level = config_parser.get(section, LEVEL)
 
-            if str.isdigit(level):
-                level = int(level)
+			if str.isdigit(level):
+				level = int(level)
 
-            logger.setLevel(level)
+			logger.setLevel(level)
 
 
 def loadPythonConfigurationFile(src_path):
-    """
-    Reuse python logging configuration file in order to parameterize loggers.
-    """
+	"""
+	Reuse python logging configuration file in order to parameterize loggers.
+	"""
 
-    _logger.debug('src_path: %s', src_path)
+	_logger.debug('src_path: %s', src_path)
 
-    logging.config.fileConfig(src_path)
+	logging.config.fileConfig(src_path)
