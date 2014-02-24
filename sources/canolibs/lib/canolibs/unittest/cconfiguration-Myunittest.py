@@ -1,17 +1,18 @@
 import unittest
 import cconfiguration
 import os.path
+import shutil
 
 WATCHER_NAME = 'test'
 TEST_FILE = 'cconfiguration.conf'
-TEST_FILE_PATH = os.path.join(
-    cconfiguration.CONFIGURATION_DIRECTORY, TEST_FILE)
 
 
 class CconfigurationTest(unittest.TestCase):
 
     def setUp(self):
         self.configuration_manager = cconfiguration.ConfigurationManager()
+        self.file_path = self.configuration_manager.get_file_path(TEST_FILE)
+        open(self.file_path, 'w+').close()
         self.has_been_updated = False
 
     def tearDown(self):
@@ -25,33 +26,46 @@ class CconfigurationTest(unittest.TestCase):
         self.assertFalse(self.has_been_updated)
 
         self.configuration_manager.register_watcher(
-            WATCHER_NAME, self._watch, TEST_FILE)
+            self._watch, WATCHER_NAME, TEST_FILE)
 
         self.assertFalse(self.has_been_updated)
 
         self.has_been_updated = False
 
         self.configuration_manager.register_watcher(
-            WATCHER_NAME, self._watch, TEST_FILE, cconfiguration.ONCE_AUTO)
+            self._watch, WATCHER_NAME, TEST_FILE, cconfiguration.ONCE_AUTO)
 
         self.assertTrue(self.has_been_updated)
 
         self.configuration_manager.start()
 
-        if os.path.exists(TEST_FILE_PATH):
-            os.remove(TEST_FILE_PATH)
-
         self.has_been_updated = False
 
-        self.assertFalse(self.has_been_updated)
+        import time
 
-        with open(TEST_FILE_PATH, 'w+') as test_file:
+        with open(self.file_path, 'w+') as test_file:
+
+            time.sleep(0.1)
 
             self.assertTrue(self.has_been_updated)
 
-            self.has_been_updated = False
+        self.has_been_updated = False
+
+        with open(self.file_path, 'w+') as test_file:
 
             test_file.write('test')
+
+            time.sleep(0.1)
+
+            self.assertTrue(self.has_been_updated)
+
+        self.has_been_updated = False
+
+        shutil.copy(self.file_path, self.file_path+'2')
+
+        os.rename(self.file_path+'2', self.file_path)
+
+        time.sleep(0.1)
 
         self.assertTrue(self.has_been_updated)
 

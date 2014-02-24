@@ -39,14 +39,11 @@ ONCE_AUTO = ONCE | AUTO  # ONCE then AUTO mode
 LAST_RECONFIGURATION = 'last_reconfiguration'  # DATE OF LAST DEFAULT/LOCAL RECONFIGURATION.
 
 # SPECIFIC TO SECTIONS
-PATH = 'path'  # CONFIGURATION FILE PATH
-WATCHER = 'watcher'  # CONFIGURATION FILE WATCHER.
-NOTIFIER = 'notifier'  # NOTIFIER
+FILE_NAME = 'file_name'  # WATCHED FILE_NAME
+WATCHER = 'watcher'  # WATCHER
 
 import logging
 logger = logging.getLogger()
-
-from pyinotify import WatchManager, ThreadedNotifier, ProcessEvent, IN_MODIFY, IN_CREATE
 
 
 class ConfigurationManager(object):
@@ -65,7 +62,7 @@ class ConfigurationManager(object):
         self.in_watching = False
         self.config_parser = RawConfigParser()
 
-        self.register_watcher(DEFAULT, self.watch, self.file_name, self.reconfiguration)
+        self.register_watcher(self.watch, DEFAULT, self.file_name, self.reconfiguration)
 
     def get_file_path(self, file_name):
 
@@ -75,21 +72,26 @@ class ConfigurationManager(object):
     def unregister_watcher(self, name):
 
         watcher = self.watchers.get(name)
+
         if watcher is not None:
             watcher.stop()
             del self.watchers[name]
 
     def register_watcher(
-        self, name, watch, file_name, reconfiguration=MANUAL
+        self, watch, name=None, file_name=None, reconfiguration=MANUAL, start=False
     ):
+
         self.unregister_watcher(name)
-        watcher = Watcher(name, self, watch, file_name, reconfiguration)
+        watcher = Watcher(self, watch, name, file_name, reconfiguration, start)
         self.watchers[name] = watcher
+
+        return watch
 
     def watch(self, conf_path):
 
         if self.in_watching:
             return
+
         self.in_watching = True
 
         self.config_parser.read(conf_path)
@@ -98,14 +100,15 @@ class ConfigurationManager(object):
             self.config_parser.getint(DEFAULT, RECONFIGURATION)
 
         for section in self.config_parser.sections():
+            watcher = self.watchers.get(section)
             try:
-                path = self.config_parser.get(section, PATH)
+                path = self.config_parser.get(FILE_NAME)
                 reconfiguration = self.config_parser.getint(
                     section, RECONFIGURATION)
-                watcher = self.config_parser.get(section, WATCHER)
-                watch = ConfigurationManager.resolve_watcher(watcher)
+                _watch = self.config_parser.get(section, WATCHER)
+                watch = ConfigurationManager.resolve_watcher(_watch)
                 self.register_watcher(
-                    section, watch, path, reconfiguration)
+                    watch, section, path, reconfiguration)
 
                 if self.reconfiguration & ONCE or watcher.reconfiguration & ONCE:
                     # delete ONCE flag
@@ -126,7 +129,7 @@ class ConfigurationManager(object):
             self.config_parser.set(DEFAULT, RECONFIGURATION, self.reconfiguration)
             self.config_parser.set(DEFAULT, LAST_RECONFIGURATION, time.ctime())
 
-        with open(conf_path, 'w+') as conf_file:
+        with open(conf_path, 'w') as conf_file:
             self.config_parser.write(conf_file)
 
         self.in_watching = False
@@ -135,25 +138,38 @@ class ConfigurationManager(object):
 
         watcher = self.watchers.get(name)
         file_path = self.get_file_path(watcher.file_name)
+
         if watcher is not None:
             watcher.watch(file_path)
 
     def stop(self):
+
         for watcher in self.watchers.itervalues():
             watcher.stop()
 
     def start(self):
+
         for watcher in self.watchers.itervalues():
             watcher.start()
 
-    def _update(self, name):
+    def _update(self, watcher):
+
+        self.in_watching = True
 
         file_path = self.get_file_path(self.file_name)
         self.config_parser.read(file_path)
-        self.config_parser.set_option(name, LAST_RECONFIGURATION, time.ctime())
 
-        with open(file_path, 'w+') as conf_file:
+        if not self.config_parser.has_section(watcher.name):
+            self.config_parser.add_section(watcher.name)
+
+        self.config_parser.set(watcher.name, RECONFIGURATION, watcher.reconfiguration)
+        self.config_parser.set(watcher.name, FILE_NAME, watcher.file_name)
+        self.config_parser.set(watcher.name, LAST_RECONFIGURATION, time.ctime())
+
+        with open(file_path, 'w') as conf_file:
             self.config_parser.write(conf_file)
+
+        self.in_watching = False
 
     @staticmethod
     def resolve_watcher(namespace):
@@ -176,19 +192,32 @@ class ConfigurationManager(object):
 
         return result
 
+from pyinotify import WatchManager, ThreadedNotifier, ProcessEvent, IN_MODIFY
+
 
 class Watcher(ProcessEvent):
 
-    MASK = IN_MODIFY | IN_CREATE
+    MASK = IN_MODIFY
 
     def __init__(
         self,
-        name,
         configuration_manager,
         watch,
-        file_name,
-        reconfiguration=MANUAL
+        name=None,
+        file_name=None,
+        reconfiguration=MANUAL,
+        start=False
     ):
+
+        if name is None:
+            if file_name is None:
+                name = watch.__name__
+                file_name = "{0}.conf".format(name)
+            else:
+                name = file_name[:len(".conf")]
+        elif file_name is None:
+            file_name = "{0}.conf".format(name)
+
         self.name = name
         self.configuration_manager = configuration_manager
         self.watch = watch
@@ -203,23 +232,23 @@ class Watcher(ProcessEvent):
 
         if reconfiguration & ONCE:
             self.watch(file_path)
+            self.reconfiguration &= AUTO
 
-    def process_DEFAULT(self, event):
+        if start:
+            self.start()
 
-        if self.reconfiguration:
+    def process_default(self, event):
+
+        if self.configuration_manager.reconfiguration or \
+                self.reconfiguration:
             self.watch(event.path)
-
-            self.configuration_manager._update(self.name)
-
-    def process_IN_MODIFY(self, event):
-        self.process_DEFAULT(event)
-
-    def process_IN_CREATE(self, event):
-        self.process_DEFAULT(event)
+            self.configuration_manager._update(self)
 
     def start(self):
         self.notifier.start()
 
     def stop(self):
-        if self.notifier.is_alive():
+        try:
             self.notifier.stop()
+        except RuntimeError:
+            pass
