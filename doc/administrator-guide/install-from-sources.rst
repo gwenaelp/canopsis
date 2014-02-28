@@ -95,3 +95,14 @@ You can verify installation: (in ``canopsis`` environment)
 .. code-block:: bash
 
     python opt/canotools/functional-test.py
+
+Trouble shooting
+----------------
+
+During some occasions, you could encounter some funny error messages such as :
+
+.. code-block:: bash
+
+    unix:///opt/canopsis/tmp/supervisor.sock no such file
+
+    This error occurs when ``supervisord`` failed to start during the installation. Simply start it in a ``canopsis`` environement.
