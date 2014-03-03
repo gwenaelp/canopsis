@@ -292,7 +292,7 @@ Ext.define('canopsis.controller.ReportingBar', {
 	},
 
 	showAddHostgroupWindow: function() {
-		console.log("showAddHostgroupWindow");
+		log.debug("showAddHostgroupWindow");
 		this.bar.addHostgroupWindow.show();
 	},
 
@@ -308,7 +308,7 @@ Ext.define('canopsis.controller.ReportingBar', {
 	},
 
 	addHostgroup: function() {
-		console.log("new hostgroup");
+		log.debug("new hostgroup");
 		var hostgroup = this.bar.addHostgroupWindow.down("#hostgroup").getValue();
 
 		this.bar.addHostgroupWindow.hide();
