@@ -67,7 +67,7 @@ class engine(cengine):
 		if event_type == 'perf':
 			pass
 
-		elif event_type in ['check', 'selector', 'sla', 'eue', 'topology', 'consolidation']:
+		elif event_type in ['check', 'calendar', 'selector', 'sla', 'eue', 'topology', 'consolidation']:
 			_id = self.archiver.check_event(event_id, event)
 			if _id:
 				event['_id'] = _id
@@ -75,7 +75,7 @@ class engine(cengine):
 				## Event to Alert
 				self.amqp.publish(event, event_id, self.amqp.exchange_name_alerts)
 
-		elif event_type in ['trap', 'log', 'calendar', 'ack', 'downtime']:
+		elif event_type in ['trap', 'log', 'ack', 'downtime']:
 
 			## passthrough
 			self.archiver.store_new_event(event_id, event)
