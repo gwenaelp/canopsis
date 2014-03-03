@@ -303,6 +303,9 @@ class cstorage(object):
 		if not account:
 			account = self.account
 			
+		if isinstance(sort, basestring):
+			sort = [(sort, 1)]
+
 		# Clean Id
 		if mfilter.get('_id', None):
 			mfilter['_id'] = self.clean_id(mfilter['_id'])
@@ -335,7 +338,6 @@ class cstorage(object):
 		else:
 			if sort is None:
 				raw_records = backend.find(mfilter, fields=mfields, safe=self.mongo_safe, start=offset, limit=limit)
-				total = raw_records.count()
 			else:
 				raw_records = backend.find(mfilter, fields=mfields, safe=self.mongo_safe)
 
@@ -362,6 +364,7 @@ class cstorage(object):
 					raw_records = raw_records[offset:]
 
 		records=[]
+
 		if not mfields:
 			for raw_record in raw_records:
 				try:
@@ -378,7 +381,7 @@ class cstorage(object):
 					## Not record format ..
 					self.logger.error("Impossible parse record ('%s') !" % err)
 		else:
-			records = [ record for record in raw_records ]
+			records = raw_records
 
 		self.logger.debug("Found %s record(s)" % len(records))
 

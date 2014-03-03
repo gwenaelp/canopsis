@@ -373,14 +373,13 @@
 								},{
 									"xtype" : "ccolorfield",
 									"name" : "curve_color",
-									"fieldLabel": "Curve color",
-									"value": "FFFFFF"
+									"fieldLabel": "Curve color"
 								},{
 									"xtype":"checkbox",
 									"text":"Trend",
 									"fieldLabel":"Trend",
-									"checked":true,
-									"name":"trend"
+									"checked":false,
+									"name":"trend_curve"
 								},{
 									"xtype": "numberfield",
 									"name": "threshold_warn",

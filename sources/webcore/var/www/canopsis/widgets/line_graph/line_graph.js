@@ -258,10 +258,12 @@ Ext.define('widgets.line_graph.line_graph', {
 	},
 
 	setOptions: function() {
+		var me = this;
+
 		this.options = {
 			reportMode: this.reportMode,
 
-			cwidget: function() { return this; }.bind(this),
+			cwidget: function() { return me; },
 
 			chart: {
 				renderTo: this.wcontainerId,
@@ -484,7 +486,7 @@ Ext.define('widgets.line_graph.line_graph', {
 	},
 
 	y_formatter: function() {
-		var me = this.chart.options.cwidget;
+		var me = this.chart.options.cwidget();
 
 		if(this.axis.series.length) {
 			var bunit = this.axis.series[0].options.bunit;
@@ -513,10 +515,10 @@ Ext.define('widgets.line_graph.line_graph', {
 			var me;
 
 			if(this['points']) {
-				me = this.points[0].series.chart.options.cwidget;
+				me = this.points[0].series.chart.options.cwidget();
 			}
 			else {
-				me = this.series.chart.options.cwidget;
+				me = this.series.chart.options.cwidget();
 			}
 
 			var formatter = function(options, value) {
@@ -799,7 +801,7 @@ Ext.define('widgets.line_graph.line_graph', {
 		}
 
 		if(this.options && this.options.cwidget) {
-			me = this.options.cwidget;
+			me = this.options.cwidget();
 		}
 		else {
 			me = this;
@@ -1261,9 +1263,9 @@ Ext.define('widgets.line_graph.line_graph', {
 
 			var line = [];
 
-			for(var i = 0; i < referent_serie.data.length; i++) {
-				var point = referent_serie.data[i];
-				line.push([point.x, point.y]);
+			for(var i = 0; i < referent_serie.options.data.length; i++) {
+				var point = referent_serie.options.data[i];
+				line.push([point[0], point[1]]);
 			}
 
 			var reg = fitData(line);
@@ -1514,7 +1516,7 @@ Ext.define('widgets.line_graph.line_graph', {
 	},
 
 	afterSetExtremes: function(e) {
-		var me = this.chart.options.cwidget;
+		var me = this.chart.options.cwidget();
 
 		if(me.onDoRefresh) {
 			me.onDoRefresh = false;
