@@ -12,4 +12,5 @@ Contents:
    uninstall
    canopsis-on-boot
    admin-howto
+   engines
    dispatcher-howto
