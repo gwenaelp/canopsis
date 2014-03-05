@@ -53,6 +53,13 @@ function detect_os(){
 		echo " + Impossible to find distribution ..."
 		exit 1
 	fi
+	
+	if [ $OPT_DIST -ne 0 ]; then
+		DIST=$OPT_DIST
+	fi
+	if [ $OPT_DISTVERS -ne 0 ]; then
+		DISTVERS=$OPT_DISTVERS
+	fi
 }
 
 function launch_cmd() {
