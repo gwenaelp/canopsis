@@ -8,8 +8,8 @@ install:
   - "cd sources"
   - "git submodule init"
   - "git submodule update"
-  - "./build-install.sh"
-  - "su - canopsis"
+  - "sudo ./build-install.sh"
+  - "sudo su - canopsis"
   - "hypcontrol start"
 # command to run tests
 script: nosetests
