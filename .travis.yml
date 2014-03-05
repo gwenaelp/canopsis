@@ -1,0 +1,14 @@
+language: python
+python:
+  - "2.7"
+# command to install dependencies
+install:
+  - "apt-get install sudo git-core libcurl4-gnutls-dev libncurses5-dev"
+  - "cd sources"
+  - "git submodule init"
+  - "git submodule update"
+  - "./build-install.sh"
+  - "su - canopsis"
+  - "hypcontrol start"
+# command to run tests
+script: nosetests
