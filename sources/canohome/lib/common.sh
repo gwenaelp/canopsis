@@ -30,6 +30,7 @@ function detect_os(){
 	fi
 	if [ -n "$OPT_DISTVERS" ]; then
 		DISTVERS=$OPT_DISTVERS
+		return
 	fi
 
 	if [ "$DEBIAN" -ne 0 ]; then
