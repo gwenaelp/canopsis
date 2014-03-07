@@ -25,6 +25,14 @@ function detect_os(){
 	ARCHL=`if [ -e /etc/arch-release ]; then echo 1; fi`
 	DIST_VERS=""
 	
+	if [ $OPT_DIST -ne 0 ]; then
+		DIST=$OPT_DIST
+	fi
+	if [ $OPT_DISTVERS -ne 0 ]; then
+		DISTVERS=$OPT_DISTVERS
+		return
+	fi
+
 	if [ $DEBIAN -ne 0 ]; then
 		DIST="debian"
 		DIST_VERS=`cat /etc/debian_version | cut -d '.' -f1`
@@ -54,12 +62,6 @@ function detect_os(){
 		exit 1
 	fi
 	
-	if [ $OPT_DIST -ne 0 ]; then
-		DIST=$OPT_DIST
-	fi
-	if [ $OPT_DISTVERS -ne 0 ]; then
-		DISTVERS=$OPT_DISTVERS
-	fi
 }
 
 function launch_cmd() {
