@@ -25,10 +25,10 @@ function detect_os(){
 	ARCHL=`if [ -e /etc/arch-release ]; then echo 1; fi`
 	DIST_VERS=""
 	
-	if [ "$OPT_DIST" -ne 0 ]; then
+	if [ "$OPT_DIST" -ne "" ]; then
 		DIST=$OPT_DIST
 	fi
-	if [ "$OPT_DISTVERS" -ne 0 ]; then
+	if [ "$OPT_DISTVERS" -ne "" ]; then
 		DISTVERS=$OPT_DISTVERS
 		return
 	fi
