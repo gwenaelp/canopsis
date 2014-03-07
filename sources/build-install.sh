@@ -330,8 +330,9 @@ function show_help(){
 #	echo "    -m [ARGUMENT]       ->  Install deps, build and make a package"
 	echo "    -p 		->  Make packages"
 	echo "    -d		->  Don't check dependencies"
-	echo "    -i		->  Just build installer"
 	echo "    -D		->  Force distribution"
+	echo "    -V		->  Force distribution version"
+	echo "    -i		->  Just build installer"
 	echo "    -h, help	->  Print this help"
 	exit 1
 }
@@ -352,9 +353,9 @@ OPT_NOBUILD=0
 OPT_WUT=0
 OPT_MPKG=0
 OPT_DCD=0
+OPT_MINSTALLER=0
 OPT_DIST=0
 OPT_DISTVERS=0
-OPT_MINSTALLER=0
 
 while getopts "cnupdhiD:V:" opt; do
 	case $opt in
@@ -474,7 +475,7 @@ if [ $OPT_BUILD -eq 1 ]; then
 	
 			pkg_options
 	
-			function install(){ true; 
+			function install(){ true; }
 			function build(){ true; }
 	
 			. /$INST_CONF/$ITEM
