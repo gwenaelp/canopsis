@@ -12,4 +12,5 @@ install:
   - "sudo ./build-install.sh -D ubuntu -V 12.04"
   - "sudo su - canopsis -c \"hypcontrol start\""
 # command to run tests
-script: nosetests
+script: 
+ - "sudo su - canopsis -c \"./opt/canotools/functional-test.py\""
